@@ -18,52 +18,35 @@
         :root {
             --bg-color: #0f172a; --card-bg: #1e293b; --text-main: #f8fafc;
             --text-muted: #94a3b8; --accent-green: #22c55e;
-            --accent-red: #ef4444; --accent-blue: #3b82f6; --border: #334155; --selected-border: #ffd700;
+            --accent-red: #ef4444; --border: #334155; --selected-border: #ffd700;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Urbanist', sans-serif; -webkit-tap-highlight-color: transparent; }
         
         body { 
-            background-color: var(--bg-color); 
-            color: var(--text-main); 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 100vh;
-            overflow-x: hidden;
+            background-color: var(--bg-color); color: var(--text-main); 
+            display: flex; justify-content: center; align-items: center; 
+            min-height: 100vh; overflow-x: hidden;
         }
 
         #bgCloseLayer { position: fixed; inset: 0; z-index: 1; }
 
         .wrapper { 
-            display: flex; 
-            flex-direction: row; 
-            align-items: center; 
-            justify-content: center; 
-            width: 100%; 
-            max-width: 1200px; 
-            padding: 20px; 
-            z-index: 10; 
-            pointer-events: none;
+            display: flex; flex-direction: row; align-items: center; justify-content: center; 
+            width: 100%; max-width: 1200px; padding: 20px; z-index: 10; pointer-events: none;
             transition: gap 0.4s ease;
         }
         
         .wrapper.panel-open { gap: 30px; }
-        
         .dashboard, .side-panel { pointer-events: auto; }
 
         .dashboard { 
-            flex: 0 1 800px; 
-            background: var(--card-bg); 
-            padding: 40px; 
-            border-radius: 24px; 
-            border: 1px solid var(--border); 
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-            width: 100%;
+            flex: 0 1 800px; background: var(--card-bg); padding: 40px; border-radius: 24px; 
+            border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.3); width: 100%;
+            transition: opacity 0.2s ease;
         }
 
         .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
-        
         .user-info h1 { font-size: 28px; font-weight: 700; color: var(--text-main); }
         .auth-link { color: var(--text-muted); cursor: pointer; font-size: 13px; margin-top: 5px; background: none; border: none; padding: 0; text-align: left; transition: 0.2s; }
 
@@ -78,7 +61,6 @@
 
         .cell.marked { background: rgba(34, 197, 94, 0.2) !important; color: var(--accent-green) !important; border-color: var(--accent-green) !important; }
         .cell.missed, .cell.today-unmarked { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border-color: var(--accent-red); }
-        
         .cell.inactive { opacity: 0.3; cursor: default; pointer-events: none; }
         .cell.selected { border-color: var(--selected-border); transform: scale(1.05); z-index: 5; }
 
@@ -90,16 +72,13 @@
         }
 
         .wrapper.panel-open .side-panel { width: 320px; padding: 30px; opacity: 1; }
-        
         .panel-btn { color: white; border: none; padding: 18px 30px; border-radius: 14px; font-weight: 700; cursor: pointer; width: 100%; transition: 0.2s; margin-bottom: 10px; }
-        .panel-btn:active { transform: scale(0.96); }
         .fix-btn { background: var(--accent-green); }
         .cancel-btn { background: var(--accent-red); }
 
         .hidden { display: none !important; }
         #authWarning { color: #fbbf24; font-size: 12px; margin-top: 10px; font-weight: 600; }
 
-        /* --- МОБИЛЬНАЯ АДАПТАЦИЯ --- */
         @media (max-width: 768px) {
             body { align-items: flex-start; overflow-y: auto; padding-top: 20px; }
             .wrapper { flex-direction: column; padding: 10px; }
@@ -118,16 +97,16 @@
 <div id="bgCloseLayer"></div>
 
 <div class="wrapper" id="mainWrapper">
-    <div class="dashboard">
+    <div class="dashboard" id="dashboardCard">
         <div class="header">
             <div class="user-info">
                 <h1 id="userDisplay">Юзер</h1>
                 <button id="authActionBtn" class="auth-link">Авторизация через Google</button>
             </div>
             <div style="display:flex; gap:10px; align-items:center; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 12px;">
-                <button id="prevMonth" style="background:none; border:none; color:white; cursor:pointer; font-size: 20px; padding: 5px;">←</button>
+                <button id="prevMonth" style="background:none; border:none; color:white; cursor:pointer; font-size: 20px;">←</button>
                 <h2 id="monthYear" style="min-width: 110px; text-align: center; font-size: 16px;">...</h2>
-                <button id="nextMonth" style="background:none; border:none; color:white; cursor:pointer; font-size: 20px; padding: 5px;">→</button>
+                <button id="nextMonth" style="background:none; border:none; color:white; cursor:pointer; font-size: 20px;">→</button>
             </div>
         </div>
         <div class="grid" id="calendarGrid"></div>
@@ -146,7 +125,6 @@
 </div>
 
 <script>
-    // Твой конфиг Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyBTwHveplqnvmfGhoqfKvtMrhdGG8Hog38",
         authDomain: "calendarpeter-ccb5e.firebaseapp.com",
@@ -163,13 +141,13 @@
 
     const wrapper = document.getElementById('mainWrapper');
     const grid = document.getElementById('calendarGrid');
+    const dashboardCard = document.getElementById('dashboardCard');
     const bgCloseLayer = document.getElementById('bgCloseLayer');
     const userDisplay = document.getElementById('userDisplay');
     const authActionBtn = document.getElementById('authActionBtn');
     
     let activeDate = new Date();
-    const realToday = new Date();
-    realToday.setHours(0,0,0,0);
+    const realToday = new Date(); realToday.setHours(0,0,0,0);
     const realTodayStr = `${realToday.getFullYear()}-${realToday.getMonth()}-${realToday.getDate()}`;
     let selectedDay = null;
     let registrationDate = null;
@@ -205,14 +183,21 @@
     });
 
     async function loadData() {
-        if (!auth.currentUser) return;
-        const doc = await db.collection('users').doc(auth.currentUser.uid).get();
-        render(doc.exists ? doc.data() : {});
+        dashboardCard.style.opacity = "0.6";
+        if (auth.currentUser) {
+            const doc = await db.collection('users').doc(auth.currentUser.uid).get();
+            render(doc.exists ? doc.data() : {});
+        } else {
+            render({});
+        }
+        dashboardCard.style.opacity = "1";
     }
 
     function render(userData) {
-        grid.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+        grid.innerHTML = ''; 
         wrapper.classList.remove('panel-open');
+        
         const m = activeDate.getMonth(); const y = activeDate.getFullYear();
         document.getElementById('monthYear').innerText = `${["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"][m]} ${y}`;
 
@@ -230,7 +215,7 @@
             } else if (registrationDate && cellDate < registrationDate) {
                 cell.classList.add('inactive'); // До регистрации — серый
             } else if (cellDate < realToday) {
-                cell.classList.add('missed'); // Пропуски — красный
+                cell.classList.add('missed'); // Пропуски после регистрации — красный
             } else {
                 cell.classList.add('inactive'); // Будущее — серый
             }
@@ -239,7 +224,6 @@
                 e.stopPropagation();
                 if (cell.classList.contains('inactive')) return;
 
-                const isMarked = cell.classList.contains('marked');
                 document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
                 cell.classList.add('selected');
                 selectedDay = { key: dateKey, el: cell };
@@ -247,6 +231,7 @@
                 document.getElementById('panelDate').innerText = (dateKey === realTodayStr) ? "сегодня" : `${i}-го числа`;
                 document.getElementById('authWarning').classList.toggle('hidden', !!auth.currentUser);
 
+                const isMarked = cell.classList.contains('marked');
                 if (isMarked) {
                     document.getElementById('panelEmoji').innerText = "🙄";
                     document.getElementById('panelDescription').classList.add('hidden');
@@ -260,8 +245,9 @@
                 }
                 wrapper.classList.add('panel-open');
             };
-            grid.appendChild(cell);
+            fragment.appendChild(cell);
         }
+        requestAnimationFrame(() => { grid.appendChild(fragment); });
     }
 
     document.getElementById('fixBtn').onclick = async () => {
@@ -269,9 +255,7 @@
         selectedDay.el.classList.remove('missed', 'today-unmarked', 'selected');
         selectedDay.el.classList.add('marked');
         wrapper.classList.remove('panel-open');
-        if (auth.currentUser) {
-            await db.collection('users').doc(auth.currentUser.uid).set({[selectedDay.key]: 'done'}, { merge: true });
-        }
+        if (auth.currentUser) await db.collection('users').doc(auth.currentUser.uid).set({[selectedDay.key]: 'done'}, { merge: true });
     };
 
     document.getElementById('cancelBtn').onclick = async () => {
@@ -280,9 +264,7 @@
         if (selectedDay.key === realTodayStr) selectedDay.el.classList.add('today-unmarked');
         else selectedDay.el.classList.add('missed');
         wrapper.classList.remove('panel-open');
-        if (auth.currentUser) {
-            await db.collection('users').doc(auth.currentUser.uid).set({[selectedDay.key]: firebase.firestore.FieldValue.delete()}, { merge: true });
-        }
+        if (auth.currentUser) await db.collection('users').doc(auth.currentUser.uid).set({[selectedDay.key]: firebase.firestore.FieldValue.delete()}, { merge: true });
     };
 
     document.getElementById('prevMonth').onclick = () => { activeDate.setMonth(activeDate.getMonth() - 1); loadData(); };
