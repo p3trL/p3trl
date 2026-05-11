@@ -18,12 +18,9 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Urbanist', sans-serif; }
-        
-        /* Чтобы клик работал по всей высоте экрана */
         html, body { height: 100%; width: 100%; }
         body { background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; align-items: center; position: relative; overflow: hidden; }
 
-        /* ФОНОВЫЙ СЛОЙ ДЛЯ ЗАКРЫТИЯ (самый нижний) */
         #bgCloseLayer { position: fixed; inset: 0; z-index: 1; width: 100%; height: 100%; }
 
         .auth-overlay { position: fixed; inset: 0; background: var(--bg-color); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; }
@@ -32,7 +29,6 @@
         .wrapper { display: flex; align-items: center; justify-content: center; width: 100%; max-width: 1200px; transition: all 0.5s ease; padding: 20px; z-index: 10; pointer-events: none; }
         .wrapper.panel-open { gap: 30px; }
         
-        /* Возвращаем кликабельность контенту внутри враппера */
         .dashboard, .side-panel { pointer-events: auto; }
 
         .dashboard { flex: 0 1 800px; background: var(--card-bg); padding: 40px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
@@ -56,8 +52,12 @@
         .side-panel { width: 0; opacity: 0; overflow: hidden; background: var(--card-bg); border-radius: 24px; border: 1px solid var(--border); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
         .wrapper.panel-open .side-panel { width: 320px; padding: 30px; opacity: 1; }
         
-        .fix-btn { background: var(--accent-green); color: white; border: none; padding: 18px 30px; border-radius: 14px; font-weight: 700; cursor: pointer; width: 100%; transition: 0.2s; }
-        .fix-btn:active { transform: scale(0.96); }
+        /* Стили для кнопок */
+        .panel-btn { color: white; border: none; padding: 18px 30px; border-radius: 14px; font-weight: 700; cursor: pointer; width: 100%; transition: 0.2s; }
+        .panel-btn:active { transform: scale(0.96); }
+        
+        .fix-btn { background: var(--accent-green); }
+        .cancel-btn { background: var(--accent-red); }
 
         .hidden { display: none !important; }
     </style>
@@ -88,12 +88,14 @@
     </div>
 
     <div class="side-panel" id="sidePanel">
-        <div style="font-size: 40px; margin-bottom: 20px;">🤔</div>
-        <div style="color: var(--text-muted); line-height: 1.5; margin-bottom: 30px; font-size: 16px;">
+        <div id="panelEmoji" style="font-size: 40px; margin-bottom: 20px;">🤔</div>
+        <div id="panelDescription" style="color: var(--text-muted); line-height: 1.5; margin-bottom: 30px; font-size: 16px;">
             Похоже, ты <b id="panelDate">4-го числа</b><br>
             забыл отметить день, лопух
         </div>
-        <button class="fix-btn" id="fixBtn">Я ВСЕ СДЕЛАЛ!</button>
+        
+        <button class="panel-btn fix-btn hidden" id="fixBtn">Я ВСЕ СДЕЛАЛ!</button>
+        <button class="panel-btn cancel-btn hidden" id="cancelBtn">ОТМЕНИТЬ НАЖАТИЕ</button>
     </div>
 </div>
 
@@ -121,7 +123,6 @@
     const realTodayStr = `${realToday.getFullYear()}-${realToday.getMonth()}-${realToday.getDate()}`;
     let selectedDay = null;
 
-    // ГЛАВНАЯ ФИШКА: Закрытие при клике по фону
     bgCloseLayer.onclick = () => {
         if (wrapper.classList.contains('panel-open')) {
             wrapper.classList.remove('panel-open');
@@ -178,12 +179,34 @@
             }
 
             cell.onclick = (e) => {
-                e.stopPropagation(); 
-                if (cell.classList.contains('missed') || (cell.classList.contains('today') && !cell.classList.contains('marked'))) {
+                e.stopPropagation();
+                const isMarked = cell.classList.contains('marked');
+                const isMissed = cell.classList.contains('missed');
+                const isToday = cell.classList.contains('today');
+
+                // Разрешаем клик по выполненным (для отмены) или по пропускам/сегодня (для отметки)
+                if (isMarked || isMissed || isToday) {
                     document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
                     cell.classList.add('selected');
                     selectedDay = { key: dateKey, el: cell };
+                    
                     document.getElementById('panelDate').innerText = (dateKey === realTodayStr) ? "сегодня" : `${i}-го числа`;
+
+                    // Логика переключения кнопок и текста
+                    if (isMarked) {
+                        // Если день УЖЕ отмечен - показываем кнопку ОТМЕНЫ
+                        document.getElementById('panelEmoji').innerText = "🙄";
+                        document.getElementById('panelDescription').classList.add('hidden');
+                        document.getElementById('fixBtn').classList.add('hidden');
+                        document.getElementById('cancelBtn').classList.remove('hidden');
+                    } else {
+                        // Если день НЕ отмечен - показываем «лопуха» и кнопку ОТМЕТИТЬ
+                        document.getElementById('panelEmoji').innerText = "🤔";
+                        document.getElementById('panelDescription').classList.remove('hidden');
+                        document.getElementById('fixBtn').classList.remove('hidden');
+                        document.getElementById('cancelBtn').classList.add('hidden');
+                    }
+                    
                     wrapper.classList.add('panel-open');
                 } else {
                     wrapper.classList.remove('panel-open');
@@ -193,6 +216,7 @@
         }
     }
 
+    // Кнопка "Я ВСЕ СДЕЛАЛ!" (зеленая)
     document.getElementById('fixBtn').onclick = async () => {
         if (selectedDay) {
             const targetEl = selectedDay.el;
@@ -202,6 +226,28 @@
 
             await db.collection('users').doc(auth.currentUser.uid).set({
                 [selectedDay.key]: 'done'
+            }, { merge: true });
+        }
+    };
+
+    // Кнопка "ОТМЕНИТЬ НАЖАТИЕ" (красная)
+    document.getElementById('cancelBtn').onclick = async () => {
+        if (selectedDay) {
+            const targetEl = selectedDay.el;
+            targetEl.classList.remove('marked', 'selected');
+            
+            // После удаления отметки возвращаем правильный цвет
+            if (selectedDay.key === realTodayStr) {
+                targetEl.classList.add('today');
+            } else {
+                targetEl.classList.add('missed');
+            }
+            
+            wrapper.classList.remove('panel-open');
+
+            // Удаляем запись из Firebase (ставим null)
+            await db.collection('users').doc(auth.currentUser.uid).set({
+                [selectedDay.key]: firebase.firestore.FieldValue.delete()
             }, { merge: true });
         }
     };
