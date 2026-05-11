@@ -239,14 +239,33 @@
         }
     }
 
+    // Оптимизированное нажатие кнопки
     document.getElementById('fixBtn').onclick = async () => {
         if (selectedDay) {
             const user = auth.currentUser;
-            await db.collection('users').doc(user.uid).set({
-                [selectedDay.key]: 'done'
-            }, { merge: true });
-            loadDataAndRender();
+            const targetEl = selectedDay.el;
+            const targetKey = selectedDay.key;
+
+            // 1. МГНОВЕННО меняем цвет (Анимация будет плавной)
+            targetEl.classList.remove('missed', 'selected');
+            targetEl.classList.add('marked');
+            wrapper.classList.remove('panel-open');
+
+            // 2. В ФОНЕ отправляем в базу
+            try {
+                await db.collection('users').doc(user.uid).set({
+                    [targetKey]: 'done'
+                }, { merge: true });
+                console.log("Данные в облаке сохранены!");
+            } catch (e) {
+                // Если вдруг интернет пропал — возвращаем как было
+                console.error("Ошибка сохранения:", e);
+                targetEl.classList.add('missed');
+                targetEl.classList.remove('marked');
+                alert("Ошибка интернета, данные не сохранились!");
+            }
         }
+    };
     };
 
     document.getElementById('prevMonth').onclick = () => { activeDate.setMonth(activeDate.getMonth() - 1); loadDataAndRender(); };
