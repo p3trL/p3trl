@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discipline Dashboard</title>
+    <title>Discipline Pro v2</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700&display=swap" rel="stylesheet">
@@ -17,28 +17,22 @@
             --accent-red: #ef4444;
             --accent-blue: #3b82f6;
             --border: #334155;
+            --selected-border: #ffd700; /* Золотой для выделения */
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Urbanist', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Urbanist', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; align-items: start; min-height: 100vh; padding: 40px; }
+        
+        .main-container {
             display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
+            width: 100%;
+            max-width: 1300px;
+            gap: 30px;
+            align-items: start;
         }
 
         .dashboard {
-            width: 100%;
-            max-width: 900px;
+            flex: 1 1 auto;
             background: var(--card-bg);
             padding: 40px;
             border-radius: 24px;
@@ -46,65 +40,23 @@
             border: 1px solid var(--border);
         }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 40px;
-        }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+        .title-group h1 { font-size: 32px; letter-spacing: -1px; margin-bottom: 4px; }
+        .title-group p { color: var(--text-muted); font-size: 14px; }
+        .nav-group { display: flex; align-items: center; gap: 20px; background: rgba(0,0,0,0.2); padding: 10px 20px; border-radius: 12px; border: 1px solid var(--border); }
+        .nav-group h2 { font-size: 18px; min-width: 140px; text-align: center; }
+        .nav-btn { background: transparent; border: none; color: var(--text-main); font-size: 20px; cursor: pointer; transition: 0.3s; padding: 0 5px; }
+        .nav-btn:hover { color: var(--accent-blue); }
 
-        .title-group h1 {
-            font-size: 32px;
-            letter-spacing: -1px;
-            margin-bottom: 4px;
-        }
+        .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
 
-        .title-group p {
-            color: var(--text-muted);
-            font-size: 14px;
+        @media (max-width: 900px) {
+            .main-container { flex-direction: column; align-items: center; }
+            .grid { grid-template-columns: repeat(4, 1fr); }
+            .side-panel { width: 100%; max-width: 500px; order: -1; }
         }
-
-        .nav-group {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            background: rgba(0,0,0,0.2);
-            padding: 10px 20px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-        }
-
-        .nav-group h2 {
-            font-size: 18px;
-            min-width: 140px;
-            text-align: center;
-        }
-
-        .nav-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-main);
-            font-size: 20px;
-            cursor: pointer;
-            transition: 0.3s;
-            padding: 0 5px;
-        }
-
-        .nav-btn:hover {
-            color: var(--accent-blue);
-        }
-
-        /* ГЛАВНОЕ ИЗМЕНЕНИЕ: 6 КОЛОНОК */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 16px;
-        }
-
-        @media (max-width: 768px) {
+        @media (max-width: 600px) {
             .grid { grid-template-columns: repeat(3, 1fr); }
-            .dashboard { padding: 20px; }
-            .header { flex-direction: column; gap: 20px; text-align: center; }
         }
 
         .cell {
@@ -122,75 +74,99 @@
             position: relative;
         }
 
-        .cell:hover:not(.future) {
-            border-color: var(--accent-blue);
-            transform: translateY(-4px);
-            background: rgba(255,255,255,0.07);
-        }
+        .cell:hover:not(.future) { border-color: var(--accent-blue); background: rgba(255,255,255,0.07); }
+        .cell.selected { border-color: var(--selected-border); transform: scale(1.05); }
 
-        /* Статус: Сегодня */
-        .cell.today {
-            background: var(--accent-green);
-            color: #fff;
-            border-color: var(--accent-green);
-            box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
-        }
+        .cell.today { background: var(--accent-green); color: #fff; border-color: var(--accent-green); }
+        .cell.marked { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); border-color: var(--accent-green); cursor: default; }
+        .cell.missed { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border-color: var(--accent-red); }
+        .cell.future { opacity: 0.3; cursor: default; }
 
-        /* Статус: Выполнено */
-        .cell.marked {
-            background: rgba(34, 197, 94, 0.2);
-            color: var(--accent-green);
-            border-color: var(--accent-green);
-        }
-
-        /* Статус: Пропущено */
-        .cell.missed {
-            background: rgba(239, 68, 68, 0.15);
-            color: var(--accent-red);
-            border-color: var(--accent-red);
-        }
-
-        /* Статус: Будущее */
-        .cell.future {
-            opacity: 0.3;
-            cursor: default;
-        }
-
-        .footer-info {
-            margin-top: 30px;
-            display: flex;
-            gap: 20px;
-            font-size: 12px;
-            color: var(--text-muted);
-            justify-content: center;
-        }
-
+        .footer-info { margin-top: 30px; display: flex; gap: 20px; font-size: 12px; color: var(--text-muted); justify-content: center; }
         .legend-item { display: flex; align-items: center; gap: 6px; }
         .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+        /* БОКОВАЯ ПАНЕЛЬ С КНОПКОЙ */
+        .side-panel {
+            flex: 0 0 300px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            text-align: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: 0.3s ease-out;
+            transform: translateX(20px);
+        }
+
+        .side-panel.visible { opacity: 1; visibility: visible; transform: translateX(0); }
+
+        .panel-icon {
+            font-size: 48px;
+            color: var(--accent-red);
+            margin-bottom: 20px;
+        }
+
+        .panel-text {
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .fix-btn {
+            background: var(--accent-green);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+            width: 100%;
+        }
+
+        .fix-btn:hover { background: #198754; transform: translateY(-2px); }
+        .fix-btn:active { transform: translateY(1px); }
 
     </style>
 </head>
 <body>
 
-<div class="dashboard">
-    <div class="header">
-        <div class="title-group">
-            <h1>Дисциплина</h1>
-            <p id="stats">Загрузка статистики...</p>
+<div class="main-container">
+    <div class="dashboard">
+        <div class="header">
+            <div class="title-group">
+                <h1>Дисциплина Pro</h1>
+                <p id="stats">Загрузка статистики...</p>
+            </div>
+            <div class="nav-group">
+                <button class="nav-btn" id="prevMonth">←</button>
+                <h2 id="monthYear">Месяц Год</h2>
+                <button class="nav-btn" id="nextMonth">→</button>
+            </div>
         </div>
-        <div class="nav-group">
-            <button class="nav-btn" id="prevMonth">←</button>
-            <h2 id="monthYear">Месяц Год</h2>
-            <button class="nav-btn" id="nextMonth">→</button>
+
+        <div class="grid" id="calendarGrid"></div>
+
+        <div class="footer-info">
+            <div class="legend-item"><div class="dot" style="background:var(--accent-green)"></div> Сегодня</div>
+            <div class="legend-item"><div class="dot" style="background:var(--accent-red)"></div> Пропуск</div>
+            <div class="legend-item"><div class="dot" style="background:var(--accent-green); opacity: 0.4;"></div> Выполнено</div>
         </div>
     </div>
 
-    <div class="grid" id="calendarGrid"></div>
-
-    <div class="footer-info">
-        <div class="legend-item"><div class="dot" style="background:var(--accent-green)"></div> Сегодня</div>
-        <div class="legend-item"><div class="dot" style="background:var(--accent-red)"></div> Пропуск</div>
-        <div class="legend-item"><div class="dot" style="background:var(--accent-green); opacity: 0.4;"></div> Выполнено</div>
+    <div class="side-panel" id="sidePanel">
+        <div class="panel-icon">🤔</div>
+        <div class="panel-text">
+            Похоже, ты <b id="panelDate">12-го числа</b><br>
+            <b>забыл отметить день, лопух</b>?<br>
+            Если задание выполнено, нажми кнопку ниже.
+        </div>
+        <button class="fix-btn" id="fixBtn">Я все сделал!</button>
     </div>
 </div>
 
@@ -198,16 +174,22 @@
     const grid = document.getElementById('calendarGrid');
     const monthYear = document.getElementById('monthYear');
     const stats = document.getElementById('stats');
+    const sidePanel = document.getElementById('sidePanel');
+    const panelDate = document.getElementById('panelDate');
+    const fixBtn = document.getElementById('fixBtn');
     
     let activeDate = new Date();
     const realToday = new Date();
     const realTodayStr = `${realToday.getFullYear()}-${realToday.getMonth()}-${realToday.getDate()}`;
+    
+    // Переменная для хранения выбранного красного дня
+    let selectedMissedDay = null;
 
-    const loadData = () => JSON.parse(localStorage.getItem('habits_v2') || '{}');
+    const loadData = () => JSON.parse(localStorage.getItem('habits_pro_v1') || '{}');
     const saveData = (key, val) => {
         const data = loadData();
         data[key] = val;
-        localStorage.setItem('habits_v2', JSON.stringify(data));
+        localStorage.setItem('habits_pro_v1', JSON.stringify(data));
         updateStats();
     };
 
@@ -218,6 +200,10 @@
     };
 
     function render() {
+        // Убираем выбор при переключении месяца
+        selectedMissedDay = null;
+        sidePanel.classList.remove('visible');
+        
         grid.innerHTML = '';
         const m = activeDate.getMonth();
         const y = activeDate.getFullYear();
@@ -236,29 +222,60 @@
             const dateKey = `${y}-${m}-${i}`;
             const cellDate = new Date(y, m, i);
 
+            // Обработка клика
+            cell.onclick = () => {
+                // Прямой клик для отметки больше не работает.
+                // Клик только выделяет красный день.
+                if (cell.classList.contains('missed')) {
+                    // Убираем выделение с предыдущего
+                    const prevSelected = document.querySelector('.cell.selected');
+                    if (prevSelected) prevSelected.classList.remove('selected');
+                    
+                    cell.classList.add('selected');
+                    selectedMissedDay = { key: dateKey, el: cell };
+                    
+                    panelDate.innerText = `${i}-го числа`;
+                    sidePanel.classList.add('visible');
+                } else if (!cell.classList.contains('future') && !cell.classList.contains('today')) {
+                   // Просто закрыть панель при клике на другие дни
+                   sidePanel.classList.remove('visible');
+                   const prevSelected = document.querySelector('.cell.selected');
+                   if (prevSelected) prevSelected.classList.remove('selected');
+                }
+            };
+
             if (dateKey === realTodayStr) {
                 cell.classList.add('today');
             } else if (cellDate < realToday) {
                 if (data[dateKey] === 'done') {
                     cell.classList.add('marked');
+                    cell.onclick = null; // Отключить клик на выполненных
                 } else {
                     cell.classList.add('missed');
                 }
             } else {
                 cell.classList.add('future');
+                cell.onclick = null; // Отключить клик на будущих
             }
-
-            cell.onclick = () => {
-                if (cellDate < realToday && !cell.classList.contains('marked')) {
-                    cell.classList.remove('missed');
-                    cell.classList.add('marked');
-                    saveData(dateKey, 'done');
-                }
-            };
 
             grid.appendChild(cell);
         }
     }
+
+    // ЛОГИКА КНОПКИ ИСПРАВЛЕНИЯ
+    fixBtn.onclick = () => {
+        if (selectedMissedDay) {
+            // Исправляем день
+            selectedMissedDay.el.classList.remove('missed', 'selected');
+            selectedMissedDay.el.classList.add('marked');
+            selectedMissedDay.el.onclick = null; // Отключить клик
+            saveData(selectedMissedDay.key, 'done');
+            
+            // Скрываем панель
+            sidePanel.classList.remove('visible');
+            selectedMissedDay = null;
+        }
+    };
 
     document.getElementById('prevMonth').onclick = () => { activeDate.setMonth(activeDate.getMonth() - 1); render(); };
     document.getElementById('nextMonth').onclick = () => { activeDate.setMonth(activeDate.getMonth() + 1); render(); };
