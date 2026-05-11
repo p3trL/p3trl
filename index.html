@@ -129,13 +129,13 @@
                 <button id="nextMonth" style="background:none; border:none; color:white; cursor:pointer;">→</button>
             </div>
         </div>
-        <div class="warn-banner hidden" id="warnBanner">
-            ⚠️ Без авторизации прогресс сохраняется только на этом устройстве
-        </div>
         <div class="grid" id="calendarGrid"></div>
     </div>
 
     <div class="side-panel" id="sidePanel">
+        <div class="warn-banner hidden" id="warnBanner">
+            ⚠️ Без авторизации прогресс сохраняется только на этом устройстве
+        </div>
         <div id="successContent" class="hidden">
             <div style="font-size: 60px; margin-bottom: 10px;">🎉</div>
             <h2 style="margin-bottom: 20px; color: var(--accent-green);">Успешно!</h2>
@@ -212,17 +212,14 @@
         function updateAuthUI(user) {
             const nameEl = document.getElementById('userDisplay');
             const btnEl  = document.getElementById('authActionBtn');
-            const warn   = document.getElementById('warnBanner');
             if (user) {
                 nameEl.textContent = user.displayName || 'юзер';
                 btnEl.textContent  = 'Выйти';
                 btnEl.className    = 'auth-btn logout';
-                warn.classList.add('hidden');
             } else {
                 nameEl.textContent = 'юзер';
                 btnEl.textContent  = 'Авторизация';
                 btnEl.className    = 'auth-btn login';
-                warn.classList.remove('hidden');
             }
         }
 
@@ -272,6 +269,9 @@
                         document.getElementById('panelDate').innerText = `${i}-го числа`;
                     }
                     document.getElementById('mainWrapper').classList.add('panel-open');
+                    const warn = document.getElementById('warnBanner');
+                    if (!auth.currentUser) warn.classList.remove('hidden');
+                    else warn.classList.add('hidden');
                 };
                 grid.appendChild(cell);
             }
