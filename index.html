@@ -41,9 +41,10 @@
         }
 
         .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
-        .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
+        .grid { display: flex; flex-wrap: wrap; gap: 16px; }
 
         .cell { 
+            flex: 0 0 calc((100% - 5 * 16px) / 6);
             aspect-ratio: 1 / 0.85; background: rgba(255,255,255,0.03); 
             border: 2px solid var(--border); border-radius: 16px; 
             display: flex; align-items: center; justify-content: center; 
@@ -81,10 +82,20 @@
             }
 
             .wrapper.panel-open .side-panel { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
-            .grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+            .grid { gap: 10px; }
+            .cell { flex: 0 0 calc((100% - 3 * 10px) / 4); font-size: 20px; }
             .dashboard { padding: 25px; width: 100%; }
-            .cell { font-size: 20px; }
         }
+
+        .grid { align-content: start; }
+
+        .warn-banner {
+            display: flex; align-items: center; gap: 8px;
+            background: rgba(239,180,68,0.12); border: 1px solid rgba(239,180,68,0.3);
+            border-radius: 12px; padding: 10px 14px; margin-bottom: 24px;
+            font-size: 13px; color: #fbbf24; line-height: 1.4;
+        }
+        .warn-banner.hidden { display: none !important; }
 
         .panel-btn { color: white; border: none; padding: 18px; border-radius: 14px; font-weight: 700; cursor: pointer; width: 100%; margin-bottom: 10px; }
         .fix-btn { background: var(--accent-green); }
@@ -117,6 +128,9 @@
                 <span id="monthYear">...</span>
                 <button id="nextMonth" style="background:none; border:none; color:white; cursor:pointer;">→</button>
             </div>
+        </div>
+        <div class="warn-banner hidden" id="warnBanner">
+            ⚠️ Без авторизации прогресс сохраняется только на этом устройстве
         </div>
         <div class="grid" id="calendarGrid"></div>
     </div>
@@ -154,51 +168,65 @@
     if (typeof firebase !== 'undefined') {
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
-        const db = firebase.firestore();
+        const db   = firebase.firestore();
 
+        const LS_KEY = 'df_data';
         let activeDate = new Date();
         const realToday = new Date(); realToday.setHours(0,0,0,0);
         const realTodayStr = `${realToday.getFullYear()}-${realToday.getMonth()}-${realToday.getDate()}`;
         let selectedDay = null;
 
+        // ── LocalStorage helpers ──────────────────────────────────
+        function lsGet()        { try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch { return {}; } }
+        function lsSet(k, v)    { const d = lsGet(); if (v === null) delete d[k]; else d[k] = v; localStorage.setItem(LS_KEY, JSON.stringify(d)); }
+
+        // ── Auth-aware data layer ─────────────────────────────────
+        async function loadData() {
+            let data = {};
+            if (auth.currentUser) {
+                try { const doc = await db.collection('users').doc(auth.currentUser.uid).get(); if (doc.exists) data = doc.data(); }
+                catch(e) { console.error(e); }
+            } else {
+                data = lsGet();
+            }
+            render(data);
+        }
+
+        async function saveKey(key, value) {
+            if (auth.currentUser) {
+                const payload = value === null
+                    ? { [key]: firebase.firestore.FieldValue.delete() }
+                    : { [key]: 'done' };
+                await db.collection('users').doc(auth.currentUser.uid).set(payload, { merge: true });
+            } else {
+                lsSet(key, value);
+            }
+        }
+
+        // ── UI helpers ────────────────────────────────────────────
         const closeAll = () => {
             document.getElementById('mainWrapper').classList.remove('panel-open');
             document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
         };
 
-        document.getElementById('closePanelBtn').onclick = closeAll;
-
-        // --- Auth UI update ---
         function updateAuthUI(user) {
-            const nameEl   = document.getElementById('userDisplay');
-            const btnEl    = document.getElementById('authActionBtn');
+            const nameEl = document.getElementById('userDisplay');
+            const btnEl  = document.getElementById('authActionBtn');
+            const warn   = document.getElementById('warnBanner');
             if (user) {
-                nameEl.textContent  = user.displayName || 'юзер';
-                btnEl.textContent   = 'Выйти';
-                btnEl.className     = 'auth-btn logout';
+                nameEl.textContent = user.displayName || 'юзер';
+                btnEl.textContent  = 'Выйти';
+                btnEl.className    = 'auth-btn logout';
+                warn.classList.add('hidden');
             } else {
-                nameEl.textContent  = 'юзер';
-                btnEl.textContent   = 'Авторизация';
-                btnEl.className     = 'auth-btn login';
+                nameEl.textContent = 'юзер';
+                btnEl.textContent  = 'Авторизация';
+                btnEl.className    = 'auth-btn login';
+                warn.classList.remove('hidden');
             }
         }
-        
-        auth.onAuthStateChanged(user => {
-            updateAuthUI(user);
-            loadData();
-        });
 
-        async function loadData() {
-            let data = {};
-            if (auth.currentUser) {
-                try {
-                    const doc = await db.collection('users').doc(auth.currentUser.uid).get();
-                    if (doc.exists) data = doc.data();
-                } catch(e) { console.error(e); }
-            }
-            render(data);
-        }
-
+        // ── Render ────────────────────────────────────────────────
         function render(userData) {
             const grid = document.getElementById('calendarGrid');
             grid.innerHTML = '';
@@ -206,72 +234,78 @@
             const months = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
             document.getElementById('monthYear').innerText = `${months[m]} ${y}`;
 
-            for (let i = 1; i <= new Date(y, m + 1, 0).getDate(); i++) {
-                const cell = document.createElement('div');
+            const daysInMonth = new Date(y, m + 1, 0).getDate();
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                const cell    = document.createElement('div');
                 const dateKey = `${y}-${m}-${i}`;
                 const cellDate = new Date(y, m, i); cellDate.setHours(0,0,0,0);
                 cell.className = 'cell'; cell.innerText = i;
-
                 const isToday = dateKey === realTodayStr;
 
                 if (isToday) {
                     cell.classList.add('today-is');
                     cell.classList.add(userData[dateKey] === 'done' ? 'marked' : 'today-unmarked');
                 } else if (userData[dateKey] === 'done') cell.classList.add('marked');
-                else if (cellDate < realToday) cell.classList.add('missed');
-                else cell.classList.add('inactive');
+                else if (cellDate < realToday)           cell.classList.add('missed');
+                else                                     cell.classList.add('inactive');
 
                 cell.onclick = async () => {
                     if (cell.classList.contains('inactive')) return;
                     document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
                     cell.classList.add('selected');
-                    selectedDay = { key: dateKey, el: cell, isToday: isToday };
-                    
-                    const isMarked = cell.classList.contains('marked');
+                    selectedDay = { key: dateKey, el: cell, isToday };
+
+                    const isMarked       = cell.classList.contains('marked');
                     const fixContent     = document.getElementById('fixContent');
                     const successContent = document.getElementById('successContent');
                     const cancelBtn      = document.getElementById('cancelBtn');
-
                     [fixContent, successContent, cancelBtn].forEach(el => el.classList.add('hidden'));
 
                     if (isMarked) {
                         cancelBtn.classList.remove('hidden');
+                    } else if (isToday) {
+                        await markDone();
+                        successContent.classList.remove('hidden');
                     } else {
-                        if (isToday) {
-                            // Сегодня: отмечаем + показываем успех
-                            await markDone();
-                            successContent.classList.remove('hidden');
-                        } else {
-                            // Прошлое: кнопка исправления без экрана успеха
-                            fixContent.classList.remove('hidden');
-                            document.getElementById('panelDate').innerText = `${i}-го числа`;
-                        }
+                        fixContent.classList.remove('hidden');
+                        document.getElementById('panelDate').innerText = `${i}-го числа`;
                     }
                     document.getElementById('mainWrapper').classList.add('panel-open');
                 };
                 grid.appendChild(cell);
             }
+
+            // Pad to 36 cells so grid height stays the same every month
+            for (let p = daysInMonth + 1; p <= 36; p++) {
+                const ghost = document.createElement('div');
+                ghost.className = 'cell';
+                ghost.style.cssText = 'opacity:0; pointer-events:none;';
+                grid.appendChild(ghost);
+            }
         }
 
         async function markDone() {
-            if (!selectedDay || !auth.currentUser) return;
+            if (!selectedDay) return;
             selectedDay.el.classList.remove('missed', 'today-unmarked');
             selectedDay.el.classList.add('marked');
-            await db.collection('users').doc(auth.currentUser.uid).set({[selectedDay.key]: 'done'}, {merge: true});
+            await saveKey(selectedDay.key, 'done');
         }
 
-        // Прошлый день — отмечаем и просто закрываем панель (без экрана успеха)
+        // ── Button handlers ───────────────────────────────────────
+        document.getElementById('closePanelBtn').onclick = closeAll;
+
         document.getElementById('fixBtn').onclick = async () => {
             await markDone();
             closeAll();
         };
 
         document.getElementById('cancelBtn').onclick = async () => {
-            if (!selectedDay || !auth.currentUser) return;
+            if (!selectedDay) return;
             selectedDay.el.classList.remove('marked');
             selectedDay.el.classList.add(selectedDay.isToday ? 'today-unmarked' : 'missed');
             const k = selectedDay.key; closeAll();
-            await db.collection('users').doc(auth.currentUser.uid).set({[k]: firebase.firestore.FieldValue.delete()}, {merge: true});
+            await saveKey(k, null);
         };
 
         document.getElementById('prevMonth').onclick = () => { activeDate.setMonth(activeDate.getMonth() - 1); loadData(); };
@@ -282,7 +316,9 @@
             else auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
         };
 
-        render({});
+        // ── Boot ──────────────────────────────────────────────────
+        auth.onAuthStateChanged(user => { updateAuthUI(user); loadData(); });
+        render(lsGet()); // instant first paint without waiting for Firebase
     }
 </script>
 </body>
