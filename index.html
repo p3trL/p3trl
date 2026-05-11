@@ -23,17 +23,18 @@
 
         #bgCloseLayer { position: fixed; inset: 0; z-index: 1; width: 100%; height: 100%; }
 
-        .auth-overlay { position: fixed; inset: 0; background: var(--bg-color); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        #loginBtn { background: var(--accent-blue); color: white; border: none; padding: 18px 40px; font-size: 20px; font-weight: 700; border-radius: 16px; cursor: pointer; }
-
         .wrapper { display: flex; align-items: center; justify-content: center; width: 100%; max-width: 1200px; transition: all 0.5s ease; padding: 20px; z-index: 10; pointer-events: none; }
         .wrapper.panel-open { gap: 30px; }
         
         .dashboard, .side-panel { pointer-events: auto; }
 
         .dashboard { flex: 0 1 800px; background: var(--card-bg); padding: 40px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
         
+        .user-info h1 { font-size: 28px; font-weight: 700; color: var(--text-main); }
+        .auth-link { color: var(--text-muted); cursor: pointer; font-size: 13px; margin-top: 5px; background: none; border: none; padding: 0; text-align: left; transition: 0.2s; }
+        .auth-link:hover { color: var(--text-main); }
+
         .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
 
         .cell { 
@@ -52,10 +53,8 @@
         .side-panel { width: 0; opacity: 0; overflow: hidden; background: var(--card-bg); border-radius: 24px; border: 1px solid var(--border); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
         .wrapper.panel-open .side-panel { width: 320px; padding: 30px; opacity: 1; }
         
-        /* Стили для кнопок */
         .panel-btn { color: white; border: none; padding: 18px 30px; border-radius: 14px; font-weight: 700; cursor: pointer; width: 100%; transition: 0.2s; }
         .panel-btn:active { transform: scale(0.96); }
-        
         .fix-btn { background: var(--accent-green); }
         .cancel-btn { background: var(--accent-red); }
 
@@ -66,17 +65,12 @@
 
 <div id="bgCloseLayer"></div>
 
-<div id="authScreen" class="auth-overlay">
-    <h1 style="margin-bottom: 30px; font-size: 40px;">Дисциплина</h1>
-    <button id="loginBtn">Войти через Google</button>
-</div>
-
-<div class="wrapper hidden" id="mainWrapper">
+<div class="wrapper" id="mainWrapper">
     <div class="dashboard" id="dashboardCard">
         <div class="header">
-            <div>
-                <h1 id="userTitle" style="font-size: 28px;">Загрузка...</h1>
-                <p id="logoutBtn" style="color: var(--text-muted); cursor: pointer; font-size: 13px; margin-top: 5px;">Выйти из аккаунта</p>
+            <div class="user-info">
+                <h1 id="userDisplay">User</h1>
+                <button id="authActionBtn" class="auth-link">Авторизация через Google</button>
             </div>
             <div style="display:flex; gap:15px; align-items:center; background: rgba(0,0,0,0.2); padding: 8px 16px; border-radius: 12px;">
                 <button id="prevMonth" style="background:none; border:none; color:white; cursor:pointer; font-size: 20px;">←</button>
@@ -93,7 +87,6 @@
             Похоже, ты <b id="panelDate">4-го числа</b><br>
             забыл отметить день, лопух
         </div>
-        
         <button class="panel-btn fix-btn hidden" id="fixBtn">Я ВСЕ СДЕЛАЛ!</button>
         <button class="panel-btn cancel-btn hidden" id="cancelBtn">ОТМЕНИТЬ НАЖАТИЕ</button>
     </div>
@@ -117,6 +110,8 @@
     const wrapper = document.getElementById('mainWrapper');
     const grid = document.getElementById('calendarGrid');
     const bgCloseLayer = document.getElementById('bgCloseLayer');
+    const userDisplay = document.getElementById('userDisplay');
+    const authActionBtn = document.getElementById('authActionBtn');
     
     let activeDate = new Date();
     const realToday = new Date();
@@ -131,18 +126,23 @@
         }
     };
 
-    document.getElementById('loginBtn').onclick = () => auth.signInWithPopup(provider);
-    document.getElementById('logoutBtn').onclick = () => auth.signOut();
+    authActionBtn.onclick = () => {
+        if (auth.currentUser) {
+            auth.signOut();
+        } else {
+            auth.signInWithPopup(provider);
+        }
+    };
 
     auth.onAuthStateChanged(user => {
         if (user) {
-            document.getElementById('authScreen').classList.add('hidden');
-            wrapper.classList.remove('hidden');
-            document.getElementById('userTitle').innerText = user.displayName;
+            userDisplay.innerText = user.displayName;
+            authActionBtn.innerText = "Выйти из аккаунта";
             loadData();
         } else {
-            document.getElementById('authScreen').classList.remove('hidden');
-            wrapper.classList.add('hidden');
+            userDisplay.innerText = "User";
+            authActionBtn.innerText = "Авторизация через Google";
+            render({}); // Рендерим пустой календарь
         }
     });
 
@@ -180,75 +180,54 @@
 
             cell.onclick = (e) => {
                 e.stopPropagation();
+                if (!auth.currentUser) return; // Не даем кликать без входа
+
                 const isMarked = cell.classList.contains('marked');
                 const isMissed = cell.classList.contains('missed');
                 const isToday = cell.classList.contains('today');
 
-                // Разрешаем клик по выполненным (для отмены) или по пропускам/сегодня (для отметки)
                 if (isMarked || isMissed || isToday) {
                     document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
                     cell.classList.add('selected');
                     selectedDay = { key: dateKey, el: cell };
-                    
                     document.getElementById('panelDate').innerText = (dateKey === realTodayStr) ? "сегодня" : `${i}-го числа`;
 
-                    // Логика переключения кнопок и текста
                     if (isMarked) {
-                        // Если день УЖЕ отмечен - показываем кнопку ОТМЕНЫ
                         document.getElementById('panelEmoji').innerText = "🙄";
                         document.getElementById('panelDescription').classList.add('hidden');
                         document.getElementById('fixBtn').classList.add('hidden');
                         document.getElementById('cancelBtn').classList.remove('hidden');
                     } else {
-                        // Если день НЕ отмечен - показываем «лопуха» и кнопку ОТМЕТИТЬ
                         document.getElementById('panelEmoji').innerText = "🤔";
                         document.getElementById('panelDescription').classList.remove('hidden');
                         document.getElementById('fixBtn').classList.remove('hidden');
                         document.getElementById('cancelBtn').classList.add('hidden');
                     }
-                    
                     wrapper.classList.add('panel-open');
-                } else {
-                    wrapper.classList.remove('panel-open');
                 }
             };
             grid.appendChild(cell);
         }
     }
 
-    // Кнопка "Я ВСЕ СДЕЛАЛ!" (зеленая)
     document.getElementById('fixBtn').onclick = async () => {
-        if (selectedDay) {
+        if (selectedDay && auth.currentUser) {
             const targetEl = selectedDay.el;
             targetEl.classList.remove('missed', 'today', 'selected');
             targetEl.classList.add('marked');
             wrapper.classList.remove('panel-open');
-
-            await db.collection('users').doc(auth.currentUser.uid).set({
-                [selectedDay.key]: 'done'
-            }, { merge: true });
+            await db.collection('users').doc(auth.currentUser.uid).set({[selectedDay.key]: 'done'}, { merge: true });
         }
     };
 
-    // Кнопка "ОТМЕНИТЬ НАЖАТИЕ" (красная)
     document.getElementById('cancelBtn').onclick = async () => {
-        if (selectedDay) {
+        if (selectedDay && auth.currentUser) {
             const targetEl = selectedDay.el;
             targetEl.classList.remove('marked', 'selected');
-            
-            // После удаления отметки возвращаем правильный цвет
-            if (selectedDay.key === realTodayStr) {
-                targetEl.classList.add('today');
-            } else {
-                targetEl.classList.add('missed');
-            }
-            
+            if (selectedDay.key === realTodayStr) targetEl.classList.add('today');
+            else targetEl.classList.add('missed');
             wrapper.classList.remove('panel-open');
-
-            // Удаляем запись из Firebase (ставим null)
-            await db.collection('users').doc(auth.currentUser.uid).set({
-                [selectedDay.key]: firebase.firestore.FieldValue.delete()
-            }, { merge: true });
+            await db.collection('users').doc(auth.currentUser.uid).set({[selectedDay.key]: firebase.firestore.FieldValue.delete()}, { merge: true });
         }
     };
 
