@@ -33,7 +33,6 @@
         
         .user-info h1 { font-size: 28px; font-weight: 700; color: var(--text-main); }
         .auth-link { color: var(--text-muted); cursor: pointer; font-size: 13px; margin-top: 5px; background: none; border: none; padding: 0; text-align: left; transition: 0.2s; }
-        .auth-link:hover { color: var(--text-main); }
 
         .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
 
@@ -47,9 +46,8 @@
         .cell.marked { background: rgba(34, 197, 94, 0.2) !important; color: var(--accent-green) !important; border-color: var(--accent-green) !important; }
         .cell.missed, .cell.today-unmarked { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border-color: var(--accent-red); }
         
-        /* Серые дни теперь тоже кликабельны */
-        .cell.inactive-past { opacity: 0.3; }
-        .cell.future { opacity: 0.1; cursor: default; pointer-events: none; }
+        /* Только дни до регистрации и будущее - серые и не кликаются */
+        .cell.inactive { opacity: 0.3; cursor: default; pointer-events: none; }
 
         .cell.selected { border-color: var(--selected-border); transform: scale(1.05); z-index: 5; }
 
@@ -141,8 +139,10 @@
             authActionBtn.innerText = "Выйти из аккаунта";
             const userRef = db.collection('users').doc(user.uid);
             const doc = await userRef.get();
-            if (doc.exists && doc.data().createdAt) registrationDate = new Date(doc.data().createdAt);
-            else {
+            if (doc.exists && doc.data().createdAt) {
+                registrationDate = new Date(doc.data().createdAt);
+                registrationDate.setHours(0,0,0,0);
+            } else {
                 registrationDate = new Date(); registrationDate.setHours(0,0,0,0);
                 await userRef.set({ createdAt: registrationDate.getTime() }, { merge: true });
             }
@@ -175,21 +175,22 @@
             } else if (dateKey === realTodayStr) {
                 cell.classList.add('today-unmarked');
             } else if (registrationDate && cellDate < registrationDate) {
-                cell.classList.add('inactive-past'); // До регистрации (серые, но кликабельные)
+                cell.classList.add('inactive'); // До регистрации — серый и НЕ кликается
             } else if (cellDate < realToday) {
-                cell.classList.add('missed'); // Пропуски после регистрации (красные)
+                cell.classList.add('missed'); // Пропуски после регистрации — красный
             } else {
-                cell.classList.add('future'); // Будущее (совсем прозрачные, не кликаются)
+                cell.classList.add('inactive'); // Будущее — серый и НЕ кликается
             }
 
             cell.onclick = (e) => {
                 e.stopPropagation();
-                if (!auth.currentUser || cell.classList.contains('future')) return;
+                // Клик работает только для отмеченных дней, пропущенных и сегодняшнего
+                if (!auth.currentUser || cell.classList.contains('inactive')) return;
 
                 const isMarked = cell.classList.contains('marked');
                 document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
                 cell.classList.add('selected');
-                selectedDay = { key: dateKey, el: cell, isBeforeReg: registrationDate && cellDate < registrationDate };
+                selectedDay = { key: dateKey, el: cell };
                 
                 document.getElementById('panelDate').innerText = (dateKey === realTodayStr) ? "сегодня" : `${i}-го числа`;
 
@@ -212,7 +213,7 @@
 
     document.getElementById('fixBtn').onclick = async () => {
         if (selectedDay) {
-            selectedDay.el.classList.remove('missed', 'today-unmarked', 'inactive-past', 'selected');
+            selectedDay.el.classList.remove('missed', 'today-unmarked', 'selected');
             selectedDay.el.classList.add('marked');
             wrapper.classList.remove('panel-open');
             await db.collection('users').doc(auth.currentUser.uid).set({[selectedDay.key]: 'done'}, { merge: true });
@@ -222,11 +223,8 @@
     document.getElementById('cancelBtn').onclick = async () => {
         if (selectedDay) {
             selectedDay.el.classList.remove('marked', 'selected');
-            // Возвращаем исходный статус в зависимости от даты
             if (selectedDay.key === realTodayStr) selectedDay.el.classList.add('today-unmarked');
-            else if (selectedDay.isBeforeReg) selectedDay.el.classList.add('inactive-past');
             else selectedDay.el.classList.add('missed');
-            
             wrapper.classList.remove('panel-open');
             await db.collection('users').doc(auth.currentUser.uid).set({[selectedDay.key]: firebase.firestore.FieldValue.delete()}, { merge: true });
         }
