@@ -153,12 +153,18 @@
                 else cell.classList.add('missed');
             } else cell.classList.add('future');
 
-            cell.onclick = () => {
-                if (cell.classList.contains('missed')) {
+           cell.onclick = () => {
+                // Теперь панель открывается для КРАСНЫХ (пропущенных) 
+                // и для СЕГОДНЯШНЕГО дня (ячейка с классом today)
+                if (cell.classList.contains('missed') || cell.classList.contains('today')) {
                     document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
                     cell.classList.add('selected');
                     selectedDay = { key: dateKey, el: cell };
-                    document.getElementById('panelDate').innerText = `${i}-го числа`;
+                    
+                    // Меняем текст в зависимости от того, какой день выбрали
+                    const dateText = (dateKey === realTodayStr) ? "сегодня" : `${i}-го числа`;
+                    document.getElementById('panelDate').innerText = dateText;
+                    
                     wrapper.classList.add('panel-open');
                 } else {
                     wrapper.classList.remove('panel-open');
