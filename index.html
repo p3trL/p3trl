@@ -18,7 +18,9 @@
         :root {
             --bg-color: #0f172a; --card-bg: #1e293b; --text-main: #f8fafc;
             --text-muted: #94a3b8; --accent-green: #22c55e;
-            --accent-red: #ef4444; --border: #334155; --selected-border: #ffd700;
+            --today-bright: #4ade80; /* Ярко-зеленый для "сегодня" */
+            --accent-red: #ef4444; --border: #334155; 
+            --selected-border: #ffd700; /* Желтая обводка при выборе */
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Urbanist', sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -57,12 +59,26 @@
             border: 2px solid var(--border); border-radius: 16px; 
             display: flex; align-items: center; justify-content: center; 
             font-size: 24px; font-weight: 700; cursor: pointer; transition: 0.2s; 
+            position: relative; z-index: 2;
         }
 
+        /* Выполненный день - Обычный зеленый */
         .cell.marked { background: rgba(34, 197, 94, 0.2) !important; color: var(--accent-green) !important; border-color: var(--accent-green) !important; }
-        .cell.missed, .cell.today-unmarked { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border-color: var(--accent-red); }
+        
+        /* Сегодняшний день (и выполненный, и нет) - Белая обводка */
+        .cell.today-is { border-color: #ffffff !important; border-width: 3px; }
+        
+        /* Сегодняшний день (еще НЕ выполнен) - Ярко-зеленый */
+        .cell.today-unmarked { background: var(--today-bright) !important; color: #0f172a !important; }
+        
+        /* Пропущенный день - Красный */
+        .cell.missed { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border-color: var(--accent-red); }
+        
+        /* Неактивные (будущее) */
         .cell.inactive { opacity: 0.3; cursor: default; pointer-events: none; }
-        .cell.selected { border-color: var(--selected-border); transform: scale(1.05); z-index: 5; }
+        
+        /* Желтая обводка ПРИ ВЫБОРЕ - ВАЖНО: перекрывает остальные стили border */
+        .cell.selected { border-color: var(--selected-border) !important; border-width: 4px !important; transform: scale(1.05); z-index: 5; }
 
         .side-panel { 
             width: 0; opacity: 0; overflow: hidden; 
@@ -200,20 +216,27 @@
             const dateKey = `${y}-${m}-${i}`;
             const cellDate = new Date(y, m, i); cellDate.setHours(0,0,0,0);
 
-            if (userData[dateKey] === 'done') {
-                cell.classList.add('marked');
-            } else if (dateKey === realTodayStr) {
-                cell.classList.add('today-unmarked');
+            // Логика цветов и обводок
+            if (dateKey === realTodayStr) {
+                cell.classList.add('today-is'); // Белая обводка (всегда)
+                if (userData[dateKey] === 'done') {
+                    cell.classList.add('marked'); // Выполнен сегодня - Обычный зеленый
+                } else {
+                    cell.classList.add('today-unmarked'); // Не выполнен сегодня - Ярко-зеленый
+                }
+            } else if (userData[dateKey] === 'done') {
+                cell.classList.add('marked'); // Выполнен в прошлом - Обычный зеленый
             } else if (cellDate < realToday) {
-                cell.classList.add('missed'); // Все прошлое — красное
+                cell.classList.add('missed'); // Пропуск в прошлом - Красный
             } else {
-                cell.classList.add('inactive'); // Будущее — серое
+                cell.classList.add('inactive'); // Будущее - Серое
             }
 
             cell.onclick = (e) => {
                 e.stopPropagation();
                 if (cell.classList.contains('inactive') && cellDate > realToday) return;
 
+                // Убираем желтую обводку у всех, ставим выбранному
                 document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
                 cell.classList.add('selected');
                 selectedDay = { key: dateKey, el: cell };
@@ -242,17 +265,28 @@
 
     document.getElementById('fixBtn').onclick = async () => {
         if (!selectedDay) return;
-        selectedDay.el.classList.remove('missed', 'today-unmarked', 'selected');
-        selectedDay.el.classList.add('marked');
+        const targetEl = selectedDay.el;
+        
+        // Визуальное обновление (сегодня или прошлое)
+        targetEl.classList.remove('missed', 'today-unmarked', 'selected');
+        targetEl.classList.add('marked'); // Становится обычным зеленым
+        
         wrapper.classList.remove('panel-open');
         if (auth.currentUser) await db.collection('users').doc(auth.currentUser.uid).set({[selectedDay.key]: 'done'}, { merge: true });
     };
 
     document.getElementById('cancelBtn').onclick = async () => {
         if (!selectedDay) return;
-        selectedDay.el.classList.remove('marked', 'selected');
-        if (selectedDay.key === realTodayStr) selectedDay.el.classList.add('today-unmarked');
-        else selectedDay.el.classList.add('missed');
+        const targetEl = selectedDay.el;
+        
+        // Визуальный откат
+        targetEl.classList.remove('marked', 'selected');
+        if (selectedDay.key === realTodayStr) {
+            targetEl.classList.add('today-unmarked'); // Возвращаем ярко-зеленый
+        } else {
+            targetEl.classList.add('missed'); // Возвращаем красный
+        }
+        
         wrapper.classList.remove('panel-open');
         if (auth.currentUser) await db.collection('users').doc(auth.currentUser.uid).set({[selectedDay.key]: firebase.firestore.FieldValue.delete()}, { merge: true });
     };
