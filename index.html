@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discipline Pro v2</title>
+    <title>Discipline Flow</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700&display=swap" rel="stylesheet">
@@ -17,47 +17,53 @@
             --accent-red: #ef4444;
             --accent-blue: #3b82f6;
             --border: #334155;
-            --selected-border: #ffd700; /* Золотой для выделения */
+            --selected-border: #ffd700;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Urbanist', sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; align-items: start; min-height: 100vh; padding: 40px; }
         
-        .main-container {
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            overflow-x: hidden;
+        }
+
+        /* КОНТЕЙНЕР ДЛЯ ПЛАВНОГО СДВИГА */
+        .wrapper {
             display: flex;
+            align-items: center;
+            justify-content: center;
             width: 100%;
-            max-width: 1300px;
+            max-width: 1200px;
+            transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            padding: 20px;
+        }
+
+        /* Когда панель открыта, сдвигаем всё */
+        .wrapper.panel-open {
             gap: 30px;
-            align-items: start;
         }
 
         .dashboard {
-            flex: 1 1 auto;
+            flex: 0 1 800px; /* Фиксированная макс. ширина календаря */
             background: var(--card-bg);
             padding: 40px;
             border-radius: 24px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             border: 1px solid var(--border);
+            z-index: 2;
         }
 
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
-        .title-group h1 { font-size: 32px; letter-spacing: -1px; margin-bottom: 4px; }
-        .title-group p { color: var(--text-muted); font-size: 14px; }
+        .title-group h1 { font-size: 32px; letter-spacing: -1px; }
         .nav-group { display: flex; align-items: center; gap: 20px; background: rgba(0,0,0,0.2); padding: 10px 20px; border-radius: 12px; border: 1px solid var(--border); }
-        .nav-group h2 { font-size: 18px; min-width: 140px; text-align: center; }
-        .nav-btn { background: transparent; border: none; color: var(--text-main); font-size: 20px; cursor: pointer; transition: 0.3s; padding: 0 5px; }
-        .nav-btn:hover { color: var(--accent-blue); }
+        .nav-btn { background: transparent; border: none; color: var(--text-main); font-size: 20px; cursor: pointer; }
 
         .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
-
-        @media (max-width: 900px) {
-            .main-container { flex-direction: column; align-items: center; }
-            .grid { grid-template-columns: repeat(4, 1fr); }
-            .side-panel { width: 100%; max-width: 500px; order: -1; }
-        }
-        @media (max-width: 600px) {
-            .grid { grid-template-columns: repeat(3, 1fr); }
-        }
 
         .cell {
             aspect-ratio: 1 / 0.85;
@@ -70,93 +76,74 @@
             font-size: 24px;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
+            transition: all 0.3s ease;
         }
 
         .cell:hover:not(.future) { border-color: var(--accent-blue); background: rgba(255,255,255,0.07); }
-        .cell.selected { border-color: var(--selected-border); transform: scale(1.05); }
-
+        .cell.selected { border-color: var(--selected-border); transform: scale(1.05); box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); }
         .cell.today { background: var(--accent-green); color: #fff; border-color: var(--accent-green); }
-        .cell.marked { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); border-color: var(--accent-green); cursor: default; }
+        .cell.marked { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); border-color: var(--accent-green); }
         .cell.missed { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border-color: var(--accent-red); }
         .cell.future { opacity: 0.3; cursor: default; }
 
-        .footer-info { margin-top: 30px; display: flex; gap: 20px; font-size: 12px; color: var(--text-muted); justify-content: center; }
-        .legend-item { display: flex; align-items: center; gap: 6px; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; }
-
-        /* БОКОВАЯ ПАНЕЛЬ С КНОПКОЙ */
+        /* БОКОВАЯ ПАНЕЛЬ С ПЛАВНЫМ ПОЯВЛЕНИЕМ */
         .side-panel {
-            flex: 0 0 300px;
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 20px;
-            border: 1px solid var(--border);
-            text-align: center;
+            width: 0;
             opacity: 0;
-            visibility: hidden;
-            transition: 0.3s ease-out;
-            transform: translateX(20px);
+            overflow: hidden;
+            background: var(--card-bg);
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            white-space: nowrap; /* Чтобы текст не переносился криво во время анимации */
         }
 
-        .side-panel.visible { opacity: 1; visibility: visible; transform: translateX(0); }
-
-        .panel-icon {
-            font-size: 48px;
-            color: var(--accent-red);
-            margin-bottom: 20px;
+        /* Состояние когда панель выезжает */
+        .wrapper.panel-open .side-panel {
+            width: 320px;
+            padding: 30px;
+            opacity: 1;
         }
 
-        .panel-text {
-            color: var(--text-muted);
-            font-size: 14px;
-            line-height: 1.5;
-            margin-bottom: 20px;
-        }
-
+        .panel-icon { font-size: 40px; margin-bottom: 15px; }
+        .panel-text { color: var(--text-muted); font-size: 16px; margin-bottom: 25px; line-height: 1.4; }
+        
         .fix-btn {
             background: var(--accent-green);
             color: white;
             border: none;
-            padding: 15px 25px;
-            border-radius: 12px;
+            padding: 18px 30px;
+            border-radius: 14px;
             font-weight: 700;
-            font-size: 16px;
             cursor: pointer;
-            transition: 0.2s;
-            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
             width: 100%;
+            transition: transform 0.2s;
         }
-
-        .fix-btn:hover { background: #198754; transform: translateY(-2px); }
-        .fix-btn:active { transform: translateY(1px); }
+        .fix-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
 
     </style>
 </head>
 <body>
 
-<div class="main-container">
+<div class="wrapper" id="mainWrapper">
     <div class="dashboard">
         <div class="header">
             <div class="title-group">
-                <h1>Дисциплина Pro</h1>
-                <p id="stats">Загрузка статистики...</p>
+                <h1>Дисциплина</h1>
             </div>
             <div class="nav-group">
                 <button class="nav-btn" id="prevMonth">←</button>
-                <h2 id="monthYear">Месяц Год</h2>
+                <h2 id="monthYear">...</h2>
                 <button class="nav-btn" id="nextMonth">→</button>
             </div>
         </div>
 
         <div class="grid" id="calendarGrid"></div>
-
-        <div class="footer-info">
-            <div class="legend-item"><div class="dot" style="background:var(--accent-green)"></div> Сегодня</div>
-            <div class="legend-item"><div class="dot" style="background:var(--accent-red)"></div> Пропуск</div>
-            <div class="legend-item"><div class="dot" style="background:var(--accent-green); opacity: 0.4;"></div> Выполнено</div>
-        </div>
     </div>
 
     <div class="side-panel" id="sidePanel">
@@ -165,47 +152,41 @@
             Похоже, ты <b id="panelDate">4-го числа</b><br>
             забыл отметить день, лопух
         </div>
-        <button class="fix-btn" id="fixBtn">Я все сделал!</button>
+        <button class="fix-btn" id="fixBtn">Я ВСЕ СДЕЛАЛ!</button>
     </div>
-    
+</div>
+
 <script>
+    const wrapper = document.getElementById('mainWrapper');
     const grid = document.getElementById('calendarGrid');
     const monthYear = document.getElementById('monthYear');
-    const stats = document.getElementById('stats');
-    const sidePanel = document.getElementById('sidePanel');
     const panelDate = document.getElementById('panelDate');
     const fixBtn = document.getElementById('fixBtn');
     
     let activeDate = new Date();
     const realToday = new Date();
     const realTodayStr = `${realToday.getFullYear()}-${realToday.getMonth()}-${realToday.getDate()}`;
-    
-    // Переменная для хранения выбранного красного дня
-    let selectedMissedDay = null;
+    let selectedDay = null;
 
-    const loadData = () => JSON.parse(localStorage.getItem('habits_pro_v1') || '{}');
+    const loadData = () => JSON.parse(localStorage.getItem('habits_v3') || '{}');
     const saveData = (key, val) => {
         const data = loadData();
         data[key] = val;
-        localStorage.setItem('habits_pro_v1', JSON.stringify(data));
-        updateStats();
+        localStorage.setItem('habits_v3', JSON.stringify(data));
     };
 
-    const updateStats = () => {
-        const data = loadData();
-        const done = Object.values(data).filter(v => v === 'done').length;
-        stats.innerText = `Всего выполнено дней: ${done}`;
-    };
+    function closePanel() {
+        wrapper.classList.remove('panel-open');
+        const selected = document.querySelector('.cell.selected');
+        if (selected) selected.classList.remove('selected');
+        selectedDay = null;
+    }
 
     function render() {
-        // Убираем выбор при переключении месяца
-        selectedMissedDay = null;
-        sidePanel.classList.remove('visible');
-        
+        closePanel();
         grid.innerHTML = '';
         const m = activeDate.getMonth();
         const y = activeDate.getFullYear();
-        
         const names = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
         monthYear.innerText = `${names[m]} ${y}`;
 
@@ -216,62 +197,41 @@
             const cell = document.createElement('div');
             cell.className = 'cell';
             cell.innerText = i;
-
             const dateKey = `${y}-${m}-${i}`;
             const cellDate = new Date(y, m, i);
-
-            // Обработка клика
-            cell.onclick = () => {
-                // Прямой клик для отметки больше не работает.
-                // Клик только выделяет красный день.
-                if (cell.classList.contains('missed')) {
-                    // Убираем выделение с предыдущего
-                    const prevSelected = document.querySelector('.cell.selected');
-                    if (prevSelected) prevSelected.classList.remove('selected');
-                    
-                    cell.classList.add('selected');
-                    selectedMissedDay = { key: dateKey, el: cell };
-                    
-                    panelDate.innerText = `${i}-го числа`;
-                    sidePanel.classList.add('visible');
-                } else if (!cell.classList.contains('future') && !cell.classList.contains('today')) {
-                   // Просто закрыть панель при клике на другие дни
-                   sidePanel.classList.remove('visible');
-                   const prevSelected = document.querySelector('.cell.selected');
-                   if (prevSelected) prevSelected.classList.remove('selected');
-                }
-            };
 
             if (dateKey === realTodayStr) {
                 cell.classList.add('today');
             } else if (cellDate < realToday) {
-                if (data[dateKey] === 'done') {
-                    cell.classList.add('marked');
-                    cell.onclick = null; // Отключить клик на выполненных
-                } else {
-                    cell.classList.add('missed');
-                }
+                if (data[dateKey] === 'done') cell.classList.add('marked');
+                else cell.classList.add('missed');
             } else {
                 cell.classList.add('future');
-                cell.onclick = null; // Отключить клик на будущих
             }
 
+            cell.onclick = () => {
+                if (cell.classList.contains('missed')) {
+                    const prev = document.querySelector('.cell.selected');
+                    if (prev) prev.classList.remove('selected');
+                    
+                    cell.classList.add('selected');
+                    selectedDay = { key: dateKey, el: cell };
+                    panelDate.innerText = `${i}-го числа`;
+                    wrapper.classList.add('panel-open'); // ПЛАВНЫЙ СДВИГ ТУТ
+                } else {
+                    closePanel();
+                }
+            };
             grid.appendChild(cell);
         }
     }
 
-    // ЛОГИКА КНОПКИ ИСПРАВЛЕНИЯ
     fixBtn.onclick = () => {
-        if (selectedMissedDay) {
-            // Исправляем день
-            selectedMissedDay.el.classList.remove('missed', 'selected');
-            selectedMissedDay.el.classList.add('marked');
-            selectedMissedDay.el.onclick = null; // Отключить клик
-            saveData(selectedMissedDay.key, 'done');
-            
-            // Скрываем панель
-            sidePanel.classList.remove('visible');
-            selectedMissedDay = null;
+        if (selectedDay) {
+            saveData(selectedDay.key, 'done');
+            selectedDay.el.classList.remove('missed', 'selected');
+            selectedDay.el.classList.add('marked');
+            closePanel(); // ВОЗВРАТ В ЦЕНТР ТУТ
         }
     };
 
@@ -279,7 +239,6 @@
     document.getElementById('nextMonth').onclick = () => { activeDate.setMonth(activeDate.getMonth() + 1); render(); };
 
     render();
-    updateStats();
 </script>
 
 </body>
