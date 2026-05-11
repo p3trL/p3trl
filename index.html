@@ -90,6 +90,17 @@
         .fix-btn { background: var(--accent-green); }
         .cancel-btn { background: var(--accent-red); }
         .hidden { display: none !important; }
+
+        /* Auth area */
+        .auth-area { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+        .user-name { font-size: 22px; font-weight: 700; line-height: 1.2; }
+        .auth-btn {
+            background: none; border: none; cursor: pointer;
+            font-size: 12px; font-family: 'Urbanist', sans-serif;
+            padding: 0;
+        }
+        .auth-btn.login  { color: var(--accent-green); }
+        .auth-btn.logout { color: var(--accent-red); }
     </style>
 </head>
 <body>
@@ -97,9 +108,9 @@
 <div class="wrapper" id="mainWrapper">
     <div class="dashboard" id="dashboardCard">
         <div class="header">
-            <div>
-                <h1 id="userDisplay">Пётр</h1>
-                <button id="authActionBtn" style="background:none; border:none; color:var(--text-muted); font-size:12px; cursor:pointer;">Авторизация</button>
+            <div class="auth-area">
+                <span class="user-name" id="userDisplay">юзер</span>
+                <button id="authActionBtn" class="auth-btn login">Авторизация</button>
             </div>
             <div style="display:flex; align-items:center; gap:10px; background:rgba(0,0,0,0.2); padding:8px 12px; border-radius:12px;">
                 <button id="prevMonth" style="background:none; border:none; color:white; cursor:pointer;">←</button>
@@ -156,9 +167,24 @@
         };
 
         document.getElementById('closePanelBtn').onclick = closeAll;
+
+        // --- Auth UI update ---
+        function updateAuthUI(user) {
+            const nameEl   = document.getElementById('userDisplay');
+            const btnEl    = document.getElementById('authActionBtn');
+            if (user) {
+                nameEl.textContent  = user.displayName || 'юзер';
+                btnEl.textContent   = 'Выйти';
+                btnEl.className     = 'auth-btn logout';
+            } else {
+                nameEl.textContent  = 'юзер';
+                btnEl.textContent   = 'Авторизация';
+                btnEl.className     = 'auth-btn login';
+            }
+        }
         
         auth.onAuthStateChanged(user => {
-            document.getElementById('userDisplay').innerText = user ? user.displayName : "Пётр";
+            updateAuthUI(user);
             loadData();
         });
 
@@ -202,23 +228,21 @@
                     selectedDay = { key: dateKey, el: cell, isToday: isToday };
                     
                     const isMarked = cell.classList.contains('marked');
-                    const fixContent = document.getElementById('fixContent');
+                    const fixContent     = document.getElementById('fixContent');
                     const successContent = document.getElementById('successContent');
-                    const cancelBtn = document.getElementById('cancelBtn');
+                    const cancelBtn      = document.getElementById('cancelBtn');
 
-                    // Сброс
                     [fixContent, successContent, cancelBtn].forEach(el => el.classList.add('hidden'));
 
                     if (isMarked) {
-                        // Уже отмечен -> просто кнопка ОТМЕНИТЬ
                         cancelBtn.classList.remove('hidden');
                     } else {
                         if (isToday) {
-                            // Сегодня: сразу успех
+                            // Сегодня: отмечаем + показываем успех
                             await markDone();
                             successContent.classList.remove('hidden');
                         } else {
-                            // Прошлое: текст про лопуха + кнопка
+                            // Прошлое: кнопка исправления без экрана успеха
                             fixContent.classList.remove('hidden');
                             document.getElementById('panelDate').innerText = `${i}-го числа`;
                         }
@@ -236,10 +260,10 @@
             await db.collection('users').doc(auth.currentUser.uid).set({[selectedDay.key]: 'done'}, {merge: true});
         }
 
+        // Прошлый день — отмечаем и просто закрываем панель (без экрана успеха)
         document.getElementById('fixBtn').onclick = async () => {
             await markDone();
-            document.getElementById('fixContent').classList.add('hidden');
-            document.getElementById('successContent').classList.remove('hidden');
+            closeAll();
         };
 
         document.getElementById('cancelBtn').onclick = async () => {
@@ -251,7 +275,8 @@
         };
 
         document.getElementById('prevMonth').onclick = () => { activeDate.setMonth(activeDate.getMonth() - 1); loadData(); };
-        document.getElementById('nextMonth').onclick = () => { activeDate.setMonth(activeDate.getMonth() + 1); loadData(); };
+        document.getElementById('nextMonth').onclick  = () => { activeDate.setMonth(activeDate.getMonth() + 1); loadData(); };
+
         document.getElementById('authActionBtn').onclick = () => {
             if (auth.currentUser) auth.signOut();
             else auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
