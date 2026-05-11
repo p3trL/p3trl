@@ -19,48 +19,87 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Urbanist', sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow-x: hidden; }
-
-        .wrapper { display: flex; align-items: center; justify-content: center; width: 100%; max-width: 1200px; padding: 20px; transition: gap 0.4s ease; }
-        .dashboard { flex: 0 1 800px; background: var(--card-bg); padding: 40px; border-radius: 24px; border: 1px solid var(--border); position: relative; }
         
+        body { 
+            background-color: var(--bg-color); color: var(--text-main); 
+            display: flex; justify-content: center; align-items: center; 
+            min-height: 100vh; overflow-x: hidden;
+        }
+
+        /* Основной контейнер */
+        .wrapper { 
+            display: flex; flex-direction: row; align-items: center; justify-content: center; 
+            width: 100%; max-width: 1200px; padding: 20px; transition: gap 0.4s ease; 
+            position: relative;
+        }
+        
+        /* Отступ между календарем и панелью на десктопе при открытии */
+        .wrapper.panel-open { gap: 30px; }
+
+        .dashboard { 
+            flex: 0 1 800px; background: var(--card-bg); padding: 40px; border-radius: 24px; 
+            border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.3); 
+            position: relative; z-index: 5; transition: opacity 0.3s ease;
+        }
+
         .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
+        .user-info h1 { font-size: 28px; font-weight: 700; color: var(--text-main); }
+        .auth-link { color: var(--text-muted); cursor: pointer; font-size: 13px; margin-top: 5px; background: none; border: none; padding: 0; text-align: left; }
+
         .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; transition: opacity 0.3s ease; }
 
-        .cell { aspect-ratio: 1 / 0.85; background: rgba(255,255,255,0.03); border: 2px solid var(--border); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; cursor: pointer; }
+        .cell { 
+            aspect-ratio: 1 / 0.85; background: rgba(255,255,255,0.03); 
+            border: 2px solid var(--border); border-radius: 16px; 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 24px; font-weight: 700; cursor: pointer; transition: 0.2s; 
+        }
+
         .cell.marked { background: rgba(34, 197, 94, 0.2) !important; color: var(--accent-green) !important; border-color: var(--accent-green) !important; }
         .cell.today-is { border-color: #ffffff !important; border-width: 3px; }
         .cell.today-unmarked { background: var(--today-bright) !important; color: #0f172a !important; }
         .cell.missed { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border-color: var(--accent-red); }
         .cell.inactive { opacity: 0.3; cursor: default; pointer-events: none; }
-        .cell.selected { border-color: var(--selected-border) !important; border-width: 4px !important; transform: scale(1.05); }
+        .cell.selected { border-color: var(--selected-border) !important; border-width: 4px !important; transform: scale(1.05); z-index: 10; }
 
         /* ДЕКСТОПНАЯ ПАНЕЛЬ (СБОКУ) */
         .side-panel { 
             width: 0; opacity: 0; overflow: hidden; 
             background: var(--card-bg); border-radius: 24px; border: 1px solid var(--border); 
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
             display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
         }
-        .wrapper.panel-open .side-panel { width: 320px; padding: 30px; opacity: 1; margin-left: 30px; }
 
-        /* МОБИЛЬНАЯ ВЕРСИЯ (ЗАМЕЩЕНИЕ) */
+        .wrapper.panel-open .side-panel { width: 320px; padding: 30px; opacity: 1; }
+
+        /* МОБИЛЬНАЯ АДАПТАЦИЯ (ЗАМЕЩЕНИЕ) */
         @media (max-width: 768px) {
-            .wrapper.panel-open .grid, .wrapper.panel-open .header { opacity: 0; pointer-events: none; }
+            .wrapper { flex-direction: column; }
             
+            /* Скрываем календарь при открытии панели на мобилках */
+            .wrapper.panel-open .dashboard > .grid, 
+            .wrapper.panel-open .dashboard > .header { 
+                opacity: 0; pointer-events: none; 
+            }
+
             .side-panel {
-                position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
-                width: 100% !important; height: auto; margin-left: 0 !important;
+                position: absolute; top: 50%; left: 50%; 
+                transform: translate(-50%, -50%) scale(0.9);
+                width: 90% !important; height: auto; margin-left: 0 !important;
                 border: none; background: transparent; z-index: 100;
             }
-            .wrapper.panel-open .side-panel { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-            
+
+            .wrapper.panel-open .side-panel {
+                opacity: 1; transform: translate(-50%, -50%) scale(1);
+            }
+
             .grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
-            .dashboard { padding: 20px; min-height: 480px; }
+            .dashboard { padding: 25px; min-height: 480px; width: 100%; }
             .cell { font-size: 20px; }
         }
 
-        .panel-btn { color: white; border: none; padding: 18px 30px; border-radius: 14px; font-weight: 700; cursor: pointer; width: 100%; margin-bottom: 10px; }
+        .panel-btn { color: white; border: none; padding: 18px 30px; border-radius: 14px; font-weight: 700; cursor: pointer; width: 100%; margin-bottom: 10px; transition: 0.2s; }
+        .panel-btn:active { transform: scale(0.95); }
         .fix-btn { background: var(--accent-green); }
         .cancel-btn { background: var(--accent-red); }
         .hidden { display: none !important; }
@@ -71,26 +110,27 @@
 <div class="wrapper" id="mainWrapper">
     <div class="dashboard" id="dashboardCard">
         <div class="header">
-            <div>
+            <div class="user-info">
                 <h1 id="userDisplay">Юзер</h1>
-                <button id="authActionBtn" style="background:none; border:none; color:var(--text-muted); font-size:12px; cursor:pointer;">Авторизация</button>
+                <button id="authActionBtn" class="auth-link">Авторизация через Google</button>
             </div>
-            <div style="display:flex; align-items:center; gap:10px; background:rgba(0,0,0,0.2); padding:8px 12px; border-radius:12px;">
+            <div style="display:flex; gap:10px; align-items:center; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 12px;">
                 <button id="prevMonth" style="background:none; border:none; color:white; cursor:pointer;">←</button>
-                <span id="monthYear">...</span>
+                <h2 id="monthYear" style="min-width: 100px; text-align: center; font-size: 14px;">...</h2>
                 <button id="nextMonth" style="background:none; border:none; color:white; cursor:pointer;">→</button>
             </div>
         </div>
+        
         <div class="grid" id="calendarGrid"></div>
 
         <div class="side-panel" id="sidePanel">
-            <div id="panelEmoji" style="font-size: 50px; margin-bottom: 15px;">🤔</div>
-            <p id="panelDescription" style="margin-bottom: 20px; color: var(--text-muted);">
-                Похоже, ты <b id="panelDate">...</b><br>забыл отметить день, лопух
-            </p>
+            <div id="panelEmoji" style="font-size: 50px; margin-bottom: 20px;">🤔</div>
+            <div id="panelDescription" style="color: var(--text-muted); line-height: 1.5; margin-bottom: 25px; font-size: 16px;">
+                Похоже, ты <b id="panelDate" style="color:white">...</b><br>забыл отметить день, лопух
+            </div>
             <button class="panel-btn fix-btn hidden" id="fixBtn">Я ВСЕ СДЕЛАЛ!</button>
             <button class="panel-btn cancel-btn hidden" id="cancelBtn">ОТМЕНИТЬ НАЖАТИЕ</button>
-            <button id="closePanelBtn" style="background:none; border:none; color:var(--text-muted); cursor:pointer; text-decoration:underline; font-size:14px; margin-top:10px;">Назад</button>
+            <button id="closePanelBtn" style="background:none; border:none; color:var(--text-muted); margin-top:15px; cursor:pointer; text-decoration:underline;">Назад</button>
         </div>
     </div>
 </div>
@@ -108,21 +148,31 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
+    const provider = new firebase.auth.GoogleAuthProvider();
 
+    const wrapper = document.getElementById('mainWrapper');
+    const grid = document.getElementById('calendarGrid');
+    
     let activeDate = new Date();
     const realToday = new Date(); realToday.setHours(0,0,0,0);
     const realTodayStr = `${realToday.getFullYear()}-${realToday.getMonth()}-${realToday.getDate()}`;
     let selectedDay = null;
 
     const closeAll = () => {
-        document.getElementById('mainWrapper').classList.remove('panel-open');
+        wrapper.classList.remove('panel-open');
         document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
     };
 
     document.getElementById('closePanelBtn').onclick = closeAll;
 
+    authActionBtn.onclick = () => {
+        if (auth.currentUser) auth.signOut();
+        else auth.signInWithPopup(provider);
+    };
+
     auth.onAuthStateChanged(user => {
         document.getElementById('userDisplay').innerText = user ? user.displayName : "Юзер";
+        document.getElementById('authActionBtn').innerText = user ? "Выйти из аккаунта" : "Авторизация через Google";
         loadData();
     });
 
@@ -134,18 +184,18 @@
     }
 
     function render(userData) {
-        const grid = document.getElementById('calendarGrid');
         const fragment = document.createDocumentFragment();
-        grid.innerHTML = ''; closeAll();
+        grid.innerHTML = ''; 
+        closeAll();
         
         const m = activeDate.getMonth(); const y = activeDate.getFullYear();
         document.getElementById('monthYear').innerText = `${["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"][m]} ${y}`;
 
         for (let i = 1; i <= new Date(y, m + 1, 0).getDate(); i++) {
             const cell = document.createElement('div');
+            cell.className = 'cell'; cell.innerText = i;
             const dateKey = `${y}-${m}-${i}`;
             const cellDate = new Date(y, m, i); cellDate.setHours(0,0,0,0);
-            cell.className = 'cell'; cell.innerText = i;
 
             if (dateKey === realTodayStr) {
                 cell.classList.add('today-is');
@@ -154,8 +204,10 @@
             else if (cellDate < realToday) cell.classList.add('missed');
             else cell.classList.add('inactive');
 
-            cell.onclick = () => {
+            cell.onclick = (e) => {
+                e.stopPropagation();
                 if (cell.classList.contains('inactive')) return;
+
                 document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
                 cell.classList.add('selected');
                 selectedDay = { key: dateKey, el: cell };
@@ -166,7 +218,7 @@
                 document.getElementById('cancelBtn').classList.toggle('hidden', !isMarked);
                 document.getElementById('panelDate').innerText = (dateKey === realTodayStr) ? "сегодня" : `${i}-го числа`;
                 
-                document.getElementById('mainWrapper').classList.add('panel-open');
+                wrapper.classList.add('panel-open');
             };
             fragment.appendChild(cell);
         }
@@ -174,6 +226,7 @@
     }
 
     document.getElementById('fixBtn').onclick = async () => {
+        if (!selectedDay) return;
         selectedDay.el.classList.remove('missed', 'today-unmarked', 'selected');
         selectedDay.el.classList.add('marked');
         closeAll();
@@ -181,6 +234,7 @@
     };
 
     document.getElementById('cancelBtn').onclick = async () => {
+        if (!selectedDay) return;
         selectedDay.el.classList.remove('marked', 'selected');
         selectedDay.el.classList.add(selectedDay.key === realTodayStr ? 'today-unmarked' : 'missed');
         closeAll();
