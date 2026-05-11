@@ -29,7 +29,7 @@
             min-height: 100vh; overflow-x: hidden;
         }
 
-        #bgCloseLayer { position: fixed; inset: 0; z-index: 1; }
+        #bgCloseLayer { position: fixed; inset: 0; z-index: 1; width: 100%; height: 100%; }
 
         .wrapper { 
             display: flex; flex-direction: row; align-items: center; justify-content: center; 
@@ -73,12 +73,14 @@
 
         .wrapper.panel-open .side-panel { width: 320px; padding: 30px; opacity: 1; }
         .panel-btn { color: white; border: none; padding: 18px 30px; border-radius: 14px; font-weight: 700; cursor: pointer; width: 100%; transition: 0.2s; margin-bottom: 10px; }
+        .panel-btn:active { transform: scale(0.96); }
         .fix-btn { background: var(--accent-green); }
         .cancel-btn { background: var(--accent-red); }
 
         .hidden { display: none !important; }
         #authWarning { color: #fbbf24; font-size: 12px; margin-top: 10px; font-weight: 600; }
 
+        /* МОБИЛЬНАЯ АДАПТАЦИЯ */
         @media (max-width: 768px) {
             body { align-items: flex-start; overflow-y: auto; padding-top: 20px; }
             .wrapper { flex-direction: column; padding: 10px; }
@@ -150,7 +152,6 @@
     const realToday = new Date(); realToday.setHours(0,0,0,0);
     const realTodayStr = `${realToday.getFullYear()}-${realToday.getMonth()}-${realToday.getDate()}`;
     let selectedDay = null;
-    let registrationDate = null;
 
     bgCloseLayer.onclick = () => {
         wrapper.classList.remove('panel-open');
@@ -166,19 +167,10 @@
         if (user) {
             userDisplay.innerText = user.displayName;
             authActionBtn.innerText = "Выйти из аккаунта";
-            const userRef = db.collection('users').doc(user.uid);
-            const doc = await userRef.get();
-            if (doc.exists && doc.data().createdAt) {
-                registrationDate = new Date(doc.data().createdAt);
-                registrationDate.setHours(0,0,0,0);
-            } else {
-                registrationDate = new Date(); registrationDate.setHours(0,0,0,0);
-                await userRef.set({ createdAt: registrationDate.getTime() }, { merge: true });
-            }
             loadData();
         } else {
             userDisplay.innerText = "Юзер"; authActionBtn.innerText = "Авторизация через Google";
-            registrationDate = null; render({});
+            render({});
         }
     });
 
@@ -212,17 +204,15 @@
                 cell.classList.add('marked');
             } else if (dateKey === realTodayStr) {
                 cell.classList.add('today-unmarked');
-            } else if (registrationDate && cellDate < registrationDate) {
-                cell.classList.add('inactive'); // До регистрации — серый
             } else if (cellDate < realToday) {
-                cell.classList.add('missed'); // Пропуски после регистрации — красный
+                cell.classList.add('missed'); // Все прошлое — красное
             } else {
-                cell.classList.add('inactive'); // Будущее — серый
+                cell.classList.add('inactive'); // Будущее — серое
             }
 
             cell.onclick = (e) => {
                 e.stopPropagation();
-                if (cell.classList.contains('inactive')) return;
+                if (cell.classList.contains('inactive') && cellDate > realToday) return;
 
                 document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
                 cell.classList.add('selected');
