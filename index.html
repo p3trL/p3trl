@@ -57,24 +57,20 @@
         .cell.inactive { opacity: 0.3; cursor: default; pointer-events: none; }
         .cell.selected { border-color: var(--selected-border) !important; border-width: 4px !important; transform: scale(1.05); }
 
-        /* ПАНЕЛЬ */
         .side-panel { 
             background: var(--card-bg); border-radius: 24px; border: 1px solid var(--border); 
             display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
             transition: all 0.3s ease;
         }
 
-        /* Десктоп */
         @media (min-width: 769px) {
             .side-panel { flex: 0 0 0; width: 0; opacity: 0; overflow: hidden; }
             .wrapper.panel-open .side-panel { flex: 0 0 320px; width: 320px; padding: 30px; opacity: 1; }
         }
 
-        /* Мобилка: окно по центру без блюра */
         @media (max-width: 768px) {
             .wrapper { flex-direction: column; }
-            /* БЛЮР УБРАН */
-            .wrapper.panel-open .dashboard { opacity: 0.4; pointer-events: none; }
+            .wrapper.panel-open .dashboard { opacity: 0.3; pointer-events: none; }
 
             .side-panel {
                 position: fixed; top: 50%; left: 50%; 
@@ -135,7 +131,6 @@
         appId: "1:941069064655:web:0af9686c36671cd8f8daba"
     };
 
-    // Защита: проверяем наличие Firebase перед запуском
     if (typeof firebase !== 'undefined') {
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
@@ -143,6 +138,7 @@
 
         let activeDate = new Date();
         const realToday = new Date(); realToday.setHours(0,0,0,0);
+        const realTodayStr = `${realToday.getFullYear()}-${realToday.getMonth()}-${realToday.getDate()}`;
         let selectedDay = null;
 
         const closeAll = () => {
@@ -186,7 +182,9 @@
                 const cellDate = new Date(y, m, i); cellDate.setHours(0,0,0,0);
                 cell.className = 'cell'; cell.innerText = i;
 
-                if (dateKey === `${realToday.getFullYear()}-${realToday.getMonth()}-${realToday.getDate()}`) {
+                const isToday = dateKey === realTodayStr;
+
+                if (isToday) {
                     cell.classList.add('today-is');
                     cell.classList.add(userData[dateKey] === 'done' ? 'marked' : 'today-unmarked');
                 } else if (userData[dateKey] === 'done') cell.classList.add('marked');
@@ -197,13 +195,32 @@
                     if (cell.classList.contains('inactive')) return;
                     document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
                     cell.classList.add('selected');
-                    selectedDay = { key: dateKey, el: cell, isToday: cellDate.getTime() === realToday.getTime() };
+                    selectedDay = { key: dateKey, el: cell, isToday: isToday };
                     
                     const isMarked = cell.classList.contains('marked');
                     document.getElementById('panelEmoji').innerText = isMarked ? "🙄" : "🤔";
-                    document.getElementById('fixBtn').classList.toggle('hidden', isMarked);
-                    document.getElementById('cancelBtn').classList.toggle('hidden', !isMarked);
-                    document.getElementById('panelDate').innerText = selectedDay.isToday ? "сегодня" : `${i}-го числа`;
+                    
+                    // ЛОГИКА КНОПОК:
+                    const fixBtn = document.getElementById('fixBtn');
+                    const cancelBtn = document.getElementById('cancelBtn');
+
+                    if (isMarked) {
+                        // Если день зеленый -> показываем только кнопку "ОТМЕНИТЬ"
+                        fixBtn.classList.add('hidden');
+                        cancelBtn.classList.remove('hidden');
+                    } else {
+                        // Если день красный/сегодняшний не отмеченный
+                        if (isToday) {
+                            // Для нынешнего дня кнопка подтверждения не нужна (по запросу)
+                            fixBtn.classList.add('hidden');
+                        } else {
+                            // Для прошлых пропущенных дней оставляем кнопку "Я ВСЕ СДЕЛАЛ!"
+                            fixBtn.classList.remove('hidden');
+                        }
+                        cancelBtn.classList.add('hidden');
+                    }
+
+                    document.getElementById('panelDate').innerText = isToday ? "сегодня" : `${i}-го числа`;
                     document.getElementById('mainWrapper').classList.add('panel-open');
                 };
                 grid.appendChild(cell);
@@ -229,10 +246,7 @@
         document.getElementById('prevMonth').onclick = () => { activeDate.setMonth(activeDate.getMonth() - 1); loadData(); };
         document.getElementById('nextMonth').onclick = () => { activeDate.setMonth(activeDate.getMonth() + 1); loadData(); };
 
-        // Первый запуск
         render({});
-    } else {
-        document.getElementById('userDisplay').innerText = "Ошибка загрузки скриптов";
     }
 </script>
 </body>
