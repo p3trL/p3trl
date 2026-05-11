@@ -111,12 +111,21 @@
     </div>
 
     <div class="side-panel" id="sidePanel">
-        <div id="panelEmoji" style="font-size: 50px; margin-bottom: 20px;">🤔</div>
-        <p id="panelDescription" style="margin-bottom: 25px; color: var(--text-muted); line-height: 1.4;">
-            Похоже, ты <b id="panelDate" style="color:white">...</b><br>забыл отметить день
-        </p>
-        <button class="panel-btn fix-btn hidden" id="fixBtn">Я ВСЕ СДЕЛАЛ!</button>
+        <div id="successContent" class="hidden">
+            <div style="font-size: 60px; margin-bottom: 10px;">🎉</div>
+            <h2 style="margin-bottom: 20px; color: var(--accent-green);">Успешно!</h2>
+        </div>
+
+        <div id="fixContent" class="hidden">
+            <div style="font-size: 50px; margin-bottom: 20px;">🤔</div>
+            <p style="margin-bottom: 25px; color: var(--text-muted); line-height: 1.4;">
+                Забыл отметить <b id="panelDate" style="color:white">...</b>?
+            </p>
+            <button class="panel-btn fix-btn" id="fixBtn">Я ВСЕ СДЕЛАЛ!</button>
+        </div>
+        
         <button class="panel-btn cancel-btn hidden" id="cancelBtn">ОТМЕНИТЬ</button>
+        
         <button id="closePanelBtn" style="background:none; border:none; color:var(--text-muted); margin-top:15px; cursor:pointer; text-decoration:underline;">Назад</button>
     </div>
 </div>
@@ -191,48 +200,52 @@
                 else if (cellDate < realToday) cell.classList.add('missed');
                 else cell.classList.add('inactive');
 
-                cell.onclick = () => {
+                cell.onclick = async () => {
                     if (cell.classList.contains('inactive')) return;
                     document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
                     cell.classList.add('selected');
                     selectedDay = { key: dateKey, el: cell, isToday: isToday };
                     
                     const isMarked = cell.classList.contains('marked');
-                    document.getElementById('panelEmoji').innerText = isMarked ? "🙄" : "🤔";
-                    
-                    // ЛОГИКА КНОПОК:
-                    const fixBtn = document.getElementById('fixBtn');
+                    const fixContent = document.getElementById('fixContent');
+                    const successContent = document.getElementById('successContent');
                     const cancelBtn = document.getElementById('cancelBtn');
 
+                    // Сбрасываем видимость всех блоков
+                    [fixContent, successContent, cancelBtn].forEach(el => el.classList.add('hidden'));
+
                     if (isMarked) {
-                        // Если день зеленый -> показываем только кнопку "ОТМЕНИТЬ"
-                        fixBtn.classList.add('hidden');
+                        // Если уже отмечен -> только красная кнопка ОТМЕНИТЬ
                         cancelBtn.classList.remove('hidden');
                     } else {
-                        // Если день красный/сегодняшний не отмеченный
+                        // Если НЕ отмечен
                         if (isToday) {
-                            // Для нынешнего дня кнопка подтверждения не нужна (по запросу)
-                            fixBtn.classList.add('hidden');
+                            // ПЕРВОЕ НАЖАТИЕ ДЛЯ СЕГОДНЯ: Сразу отмечаем и показываем успех
+                            await markDone();
+                            successContent.classList.remove('hidden');
                         } else {
-                            // Для прошлых пропущенных дней оставляем кнопку "Я ВСЕ СДЕЛАЛ!"
-                            fixBtn.classList.remove('hidden');
+                            // Для прошлых пропущенных дней: Сначала панель "Я все сделал"
+                            fixContent.classList.remove('hidden');
+                            document.getElementById('panelDate').innerText = `${i}-го числа`;
                         }
-                        cancelBtn.classList.add('hidden');
                     }
-
-                    document.getElementById('panelDate').innerText = isToday ? "сегодня" : `${i}-го числа`;
                     document.getElementById('mainWrapper').classList.add('panel-open');
                 };
                 grid.appendChild(cell);
             }
         }
 
-        document.getElementById('fixBtn').onclick = async () => {
+        async function markDone() {
             if (!selectedDay || !auth.currentUser) return;
             selectedDay.el.classList.remove('missed', 'today-unmarked');
             selectedDay.el.classList.add('marked');
-            const k = selectedDay.key; closeAll();
-            await db.collection('users').doc(auth.currentUser.uid).set({[k]: 'done'}, {merge: true});
+            await db.collection('users').doc(auth.currentUser.uid).set({[selectedDay.key]: 'done'}, {merge: true});
+        }
+
+        document.getElementById('fixBtn').onclick = async () => {
+            await markDone();
+            document.getElementById('fixContent').classList.add('hidden');
+            document.getElementById('successContent').classList.remove('hidden');
         };
 
         document.getElementById('cancelBtn').onclick = async () => {
