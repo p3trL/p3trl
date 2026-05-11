@@ -13,7 +13,7 @@
     <style>
         :root {
             --bg-color: #0f172a; --card-bg: #1e293b; --text-main: #f8fafc;
-            --text-muted: #94a3b8; --accent-green: #22c55e; --today-bright: #4ade80; 
+            --text-muted: #94a3b8; --accent-green: #22c55e;
             --accent-red: #ef4444; --accent-blue: #3b82f6; --border: #334155; --selected-border: #ffd700;
         }
 
@@ -45,10 +45,13 @@
         }
 
         .cell.marked { background: rgba(34, 197, 94, 0.2) !important; color: var(--accent-green) !important; border-color: var(--accent-green) !important; }
-        .cell.today { background: var(--today-bright); color: #0f172a; border-color: var(--today-bright); }
-        .cell.missed { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border-color: var(--accent-red); }
+        .cell.missed, .cell.today-unmarked { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border-color: var(--accent-red); }
+        
+        /* Серые дни теперь тоже кликабельны */
+        .cell.inactive-past { opacity: 0.3; }
+        .cell.future { opacity: 0.1; cursor: default; pointer-events: none; }
+
         .cell.selected { border-color: var(--selected-border); transform: scale(1.05); z-index: 5; }
-        .cell.future { opacity: 0.3; cursor: default; }
 
         .side-panel { width: 0; opacity: 0; overflow: hidden; background: var(--card-bg); border-radius: 24px; border: 1px solid var(--border); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
         .wrapper.panel-open .side-panel { width: 320px; padding: 30px; opacity: 1; }
@@ -66,7 +69,7 @@
 <div id="bgCloseLayer"></div>
 
 <div class="wrapper" id="mainWrapper">
-    <div class="dashboard" id="dashboardCard">
+    <div class="dashboard">
         <div class="header">
             <div class="user-info">
                 <h1 id="userDisplay">User</h1>
@@ -84,7 +87,7 @@
     <div class="side-panel" id="sidePanel">
         <div id="panelEmoji" style="font-size: 40px; margin-bottom: 20px;">🤔</div>
         <div id="panelDescription" style="color: var(--text-muted); line-height: 1.5; margin-bottom: 30px; font-size: 16px;">
-            Похоже, ты <b id="panelDate">4-го числа</b><br>
+            Похоже, ты <b id="panelDate">...</b><br>
             забыл отметить день, лопух
         </div>
         <button class="panel-btn fix-btn hidden" id="fixBtn">Я ВСЕ СДЕЛАЛ!</button>
@@ -115,117 +118,115 @@
     
     let activeDate = new Date();
     const realToday = new Date();
+    realToday.setHours(0,0,0,0);
     const realTodayStr = `${realToday.getFullYear()}-${realToday.getMonth()}-${realToday.getDate()}`;
     let selectedDay = null;
+    let registrationDate = null;
 
     bgCloseLayer.onclick = () => {
         if (wrapper.classList.contains('panel-open')) {
             wrapper.classList.remove('panel-open');
             document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
-            selectedDay = null;
         }
     };
 
     authActionBtn.onclick = () => {
-        if (auth.currentUser) {
-            auth.signOut();
-        } else {
-            auth.signInWithPopup(provider);
-        }
+        if (auth.currentUser) auth.signOut();
+        else auth.signInWithPopup(provider);
     };
 
-    auth.onAuthStateChanged(user => {
+    auth.onAuthStateChanged(async user => {
         if (user) {
             userDisplay.innerText = user.displayName;
             authActionBtn.innerText = "Выйти из аккаунта";
+            const userRef = db.collection('users').doc(user.uid);
+            const doc = await userRef.get();
+            if (doc.exists && doc.data().createdAt) registrationDate = new Date(doc.data().createdAt);
+            else {
+                registrationDate = new Date(); registrationDate.setHours(0,0,0,0);
+                await userRef.set({ createdAt: registrationDate.getTime() }, { merge: true });
+            }
             loadData();
         } else {
-            userDisplay.innerText = "User";
-            authActionBtn.innerText = "Авторизация через Google";
-            render({}); // Рендерим пустой календарь
+            userDisplay.innerText = "User"; authActionBtn.innerText = "Авторизация через Google";
+            registrationDate = null; render({});
         }
     });
 
     async function loadData() {
-        const user = auth.currentUser;
-        if (!user) return;
-        const doc = await db.collection('users').doc(user.uid).get();
+        const doc = await db.collection('users').doc(auth.currentUser.uid).get();
         render(doc.exists ? doc.data() : {});
     }
 
     function render(userData) {
         grid.innerHTML = '';
         wrapper.classList.remove('panel-open');
-        const m = activeDate.getMonth();
-        const y = activeDate.getFullYear();
-        const names = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-        document.getElementById('monthYear').innerText = `${names[m]} ${y}`;
+        const m = activeDate.getMonth(); const y = activeDate.getFullYear();
+        document.getElementById('monthYear').innerText = `${["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"][m]} ${y}`;
 
         for (let i = 1; i <= new Date(y, m + 1, 0).getDate(); i++) {
             const cell = document.createElement('div');
-            cell.className = 'cell';
-            cell.innerText = i;
+            cell.className = 'cell'; cell.innerText = i;
             const dateKey = `${y}-${m}-${i}`;
-            const cellDate = new Date(y, m, i);
+            const cellDate = new Date(y, m, i); cellDate.setHours(0,0,0,0);
 
             if (userData[dateKey] === 'done') {
                 cell.classList.add('marked');
             } else if (dateKey === realTodayStr) {
-                cell.classList.add('today');
+                cell.classList.add('today-unmarked');
+            } else if (registrationDate && cellDate < registrationDate) {
+                cell.classList.add('inactive-past'); // До регистрации (серые, но кликабельные)
             } else if (cellDate < realToday) {
-                cell.classList.add('missed');
-            } else if (cellDate > realToday) {
-                cell.classList.add('future');
+                cell.classList.add('missed'); // Пропуски после регистрации (красные)
+            } else {
+                cell.classList.add('future'); // Будущее (совсем прозрачные, не кликаются)
             }
 
             cell.onclick = (e) => {
                 e.stopPropagation();
-                if (!auth.currentUser) return; // Не даем кликать без входа
+                if (!auth.currentUser || cell.classList.contains('future')) return;
 
                 const isMarked = cell.classList.contains('marked');
-                const isMissed = cell.classList.contains('missed');
-                const isToday = cell.classList.contains('today');
+                document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
+                cell.classList.add('selected');
+                selectedDay = { key: dateKey, el: cell, isBeforeReg: registrationDate && cellDate < registrationDate };
+                
+                document.getElementById('panelDate').innerText = (dateKey === realTodayStr) ? "сегодня" : `${i}-го числа`;
 
-                if (isMarked || isMissed || isToday) {
-                    document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
-                    cell.classList.add('selected');
-                    selectedDay = { key: dateKey, el: cell };
-                    document.getElementById('panelDate').innerText = (dateKey === realTodayStr) ? "сегодня" : `${i}-го числа`;
-
-                    if (isMarked) {
-                        document.getElementById('panelEmoji').innerText = "🙄";
-                        document.getElementById('panelDescription').classList.add('hidden');
-                        document.getElementById('fixBtn').classList.add('hidden');
-                        document.getElementById('cancelBtn').classList.remove('hidden');
-                    } else {
-                        document.getElementById('panelEmoji').innerText = "🤔";
-                        document.getElementById('panelDescription').classList.remove('hidden');
-                        document.getElementById('fixBtn').classList.remove('hidden');
-                        document.getElementById('cancelBtn').classList.add('hidden');
-                    }
-                    wrapper.classList.add('panel-open');
+                if (isMarked) {
+                    document.getElementById('panelEmoji').innerText = "🙄";
+                    document.getElementById('panelDescription').classList.add('hidden');
+                    document.getElementById('fixBtn').classList.add('hidden');
+                    document.getElementById('cancelBtn').classList.remove('hidden');
+                } else {
+                    document.getElementById('panelEmoji').innerText = "🤔";
+                    document.getElementById('panelDescription').classList.remove('hidden');
+                    document.getElementById('fixBtn').classList.remove('hidden');
+                    document.getElementById('cancelBtn').classList.add('hidden');
                 }
+                wrapper.classList.add('panel-open');
             };
             grid.appendChild(cell);
         }
     }
 
     document.getElementById('fixBtn').onclick = async () => {
-        if (selectedDay && auth.currentUser) {
-            const targetEl = selectedDay.el;
-            targetEl.classList.remove('missed', 'today', 'selected');
-            targetEl.classList.add('marked');
+        if (selectedDay) {
+            selectedDay.el.classList.remove('missed', 'today-unmarked', 'inactive-past', 'selected');
+            selectedDay.el.classList.add('marked');
             wrapper.classList.remove('panel-open');
             await db.collection('users').doc(auth.currentUser.uid).set({[selectedDay.key]: 'done'}, { merge: true });
         }
     };
 
     document.getElementById('cancelBtn').onclick = async () => {
-        if (selectedDay && auth.currentUser) {
-            const targetEl = selectedDay.el;
-            targetEl.classList.remove('marked', 'selected');
-            if (selectedDay.key === realTodayStr) targetEl.classList.add('today');
-            else targetEl.classList.add('missed');
+        if (selectedDay) {
+            selectedDay.el.classList.remove('marked', 'selected');
+            // Возвращаем исходный статус в зависимости от даты
+            if (selectedDay.key === realTodayStr) selectedDay.el.classList.add('today-unmarked');
+            else if (selectedDay.isBeforeReg) selectedDay.el.classList.add('inactive-past');
+            else selectedDay.el.classList.add('missed');
+            
             wrapper.classList.remove('panel-open');
             await db.collection('users').doc(auth.currentUser.uid).set({[selectedDay.key]: firebase.firestore.FieldValue.delete()}, { merge: true });
         }
