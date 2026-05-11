@@ -3,191 +3,269 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Трекер Дисциплины</title>
+    <title>Discipline Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #f4f4f9;
-            --calendar-bg: #ffffff;
-            --text-color: #333;
-            --border-color: #ddd;
-            --primary-color: #007bff;
-            --success-color: #2ecc71; /* Светло-зеленый, как на рисунке */
-            --fail-color: #e74c3c;    /* Красный для пропусков */
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --accent-blue: #3b82f6;
+            --border: #334155;
         }
 
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-color); display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-        
-        .header-container { text-align: center; margin-bottom: 20px; }
-        .calendar-title { font-size: 2rem; margin: 0 0 10px 0; color: var(--primary-color); }
-        .calendar-controls { display: flex; gap: 10px; justify-content: center; align-items: center; }
-        .calendar-controls button { background: var(--primary-color); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; transition: 0.2s; }
-        .calendar-controls button:hover { opacity: 0.8; }
-        
-        /* Сетка как на рисунке, 4 колонки в ряд (можно менять) */
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr); /* 4 колонки по умолчанию */
-            gap: 15px;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Urbanist', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard {
             width: 100%;
-            max-width: 600px; /* Ограничим ширину */
-            padding: 10px;
+            max-width: 900px;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
         }
 
-        /* Адаптивность для мобильных */
-        @media (max-width: 500px) {
-            .calendar-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
         }
 
-        .day-cell {
-            background: var(--calendar-bg);
-            border: 2px solid var(--border-color);
-            border-radius: 8px; /* Скругление */
-            aspect-ratio: 1 / 0.8; /* Соотношение как на рисунке */
+        .title-group h1 {
+            font-size: 32px;
+            letter-spacing: -1px;
+            margin-bottom: 4px;
+        }
+
+        .title-group p {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .nav-group {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: rgba(0,0,0,0.2);
+            padding: 10px 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .nav-group h2 {
+            font-size: 18px;
+            min-width: 140px;
+            text-align: center;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 20px;
+            cursor: pointer;
+            transition: 0.3s;
+            padding: 0 5px;
+        }
+
+        .nav-btn:hover {
+            color: var(--accent-blue);
+        }
+
+        /* ГЛАВНОЕ ИЗМЕНЕНИЕ: 6 КОЛОНОК */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: repeat(3, 1fr); }
+            .dashboard { padding: 20px; }
+            .header { flex-direction: column; gap: 20px; text-align: center; }
+        }
+
+        .cell {
+            aspect-ratio: 1 / 0.85;
+            background: rgba(255,255,255,0.03);
+            border: 2px solid var(--border);
+            border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
-            font-weight: bold;
+            font-size: 24px;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.2s ease-in-out;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
         }
 
-        /* Состояния ячеек */
-        
-        /* 1. По умолчанию */
-        .day-cell:not(.empty):hover { border-color: var(--primary-color); transform: scale(1.03); }
+        .cell:hover:not(.future) {
+            border-color: var(--accent-blue);
+            transform: translateY(-4px);
+            background: rgba(255,255,255,0.07);
+        }
 
-        /* 2. Сегодня (как день №12 на рисунке) */
-        .day-cell.today { background-color: var(--success-color); color: white; border-color: #27ae60; }
+        /* Статус: Сегодня */
+        .cell.today {
+            background: var(--accent-green);
+            color: #fff;
+            border-color: var(--accent-green);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+        }
 
-        /* 3. Отмеченный прошедший день */
-        .day-cell.marked { background-color: #a9dfbf; color: #196f3d; border-color: #196f3d; }
+        /* Статус: Выполнено */
+        .cell.marked {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--accent-green);
+            border-color: var(--accent-green);
+        }
 
-        /* 4. Пропущенный прошедший день (Авто-красный) */
-        .day-cell.missed { background-color: var(--fail-color); color: white; border-color: #c0392b; }
+        /* Статус: Пропущено */
+        .cell.missed {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+            border-color: var(--accent-red);
+        }
 
-        .day-cell.empty { background: transparent; border: none; cursor: default; }
+        /* Статус: Будущее */
+        .cell.future {
+            opacity: 0.3;
+            cursor: default;
+        }
+
+        .footer-info {
+            margin-top: 30px;
+            display: flex;
+            gap: 20px;
+            font-size: 12px;
+            color: var(--text-muted);
+            justify-content: center;
+        }
+
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; }
 
     </style>
 </head>
 <body>
 
-    <div class="header-container">
-        <h1 class="calendar-title">Дисциплина</h1>
-        <div class="calendar-controls">
-            <button id="prevMonth">&lt; Пр.</button>
-            <h2 id="monthYear"></h2>
-            <button id="nextMonth">Сл. &gt;</button>
+<div class="dashboard">
+    <div class="header">
+        <div class="title-group">
+            <h1>Дисциплина</h1>
+            <p id="stats">Загрузка статистики...</p>
+        </div>
+        <div class="nav-group">
+            <button class="nav-btn" id="prevMonth">←</button>
+            <h2 id="monthYear">Месяц Год</h2>
+            <button class="nav-btn" id="nextMonth">→</button>
         </div>
     </div>
 
-    <div id="calendarGrid" class="calendar-grid">
-        </div>
+    <div class="grid" id="calendarGrid"></div>
 
-    <script>
-        const monthYearEl = document.getElementById('monthYear');
-        const gridEl = document.getElementById('calendarGrid');
+    <div class="footer-info">
+        <div class="legend-item"><div class="dot" style="background:var(--accent-green)"></div> Сегодня</div>
+        <div class="legend-item"><div class="dot" style="background:var(--accent-red)"></div> Пропуск</div>
+        <div class="legend-item"><div class="dot" style="background:var(--accent-green); opacity: 0.4;"></div> Выполнено</div>
+    </div>
+</div>
+
+<script>
+    const grid = document.getElementById('calendarGrid');
+    const monthYear = document.getElementById('monthYear');
+    const stats = document.getElementById('stats');
+    
+    let activeDate = new Date();
+    const realToday = new Date();
+    const realTodayStr = `${realToday.getFullYear()}-${realToday.getMonth()}-${realToday.getDate()}`;
+
+    const loadData = () => JSON.parse(localStorage.getItem('habits_v2') || '{}');
+    const saveData = (key, val) => {
+        const data = loadData();
+        data[key] = val;
+        localStorage.setItem('habits_v2', JSON.stringify(data));
+        updateStats();
+    };
+
+    const updateStats = () => {
+        const data = loadData();
+        const done = Object.values(data).filter(v => v === 'done').length;
+        stats.innerText = `Всего выполнено дней: ${done}`;
+    };
+
+    function render() {
+        grid.innerHTML = '';
+        const m = activeDate.getMonth();
+        const y = activeDate.getFullYear();
         
-        // Получаем сегодняшнюю дату для сравнения
-        const realToday = new Date();
-        const realTodayStr = `${realToday.getFullYear()}-${realToday.getMonth()}-${realToday.getDate()}`;
+        const names = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+        monthYear.innerText = `${names[m]} ${y}`;
 
-        // Переменная для навигации по месяцам
-        let currentDate = new Date();
+        const lastDay = new Date(y, m + 1, 0).getDate();
+        const data = loadData();
 
-        // Уникальный ключ для localStorage
-        const STORAGE_KEY = 'discipline_marks_v1';
+        for (let i = 1; i <= lastDay; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.innerText = i;
 
-        // Загрузка отметок из памяти браузера
-        function loadMarks() {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            return saved ? JSON.parse(saved) : {};
-        }
+            const dateKey = `${y}-${m}-${i}`;
+            const cellDate = new Date(y, m, i);
 
-        // Сохранение отметок в память
-        function saveMark(dateKey, status) {
-            let marks = loadMarks();
-            marks[dateKey] = status; // status: 'marked'
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(marks));
-        }
-
-        function renderCalendar() {
-            gridEl.innerHTML = "";
-            const month = currentDate.getMonth();
-            const year = currentDate.getFullYear();
-            
-            // Название месяца и год
-            const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-            monthYearEl.innerText = `${monthNames[month]} ${year}`;
-
-            // Параметры месяца
-            const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7; // Начинаем с Пн
-            const lastDay = new Date(year, month + 1, 0).getDate(); // 28, 30 или 31
-            
-            // Загружаем отметки
-            const marks = loadMarks();
-
-            // Создаем ячейки
-            for (let i = 1; i <= lastDay; i++) {
-                const dayCell = document.createElement('div');
-                dayCell.classList.add('day-cell');
-                dayCell.innerText = i;
-                
-                // Создаем уникальный ключ для этой даты (ГГГГ-ММ-ДД)
-                const dateKey = `${year}-${month}-${i}`;
-                const thisCellDate = new Date(year, month, i);
-
-                // ЛОГИКА СТАТУСОВ:
-
-                // 1. Если это СЕГОДНЯ (как на рисунке день №12)
-                if (dateKey === realTodayStr) {
-                    dayCell.classList.add('today');
+            if (dateKey === realTodayStr) {
+                cell.classList.add('today');
+            } else if (cellDate < realToday) {
+                if (data[dateKey] === 'done') {
+                    cell.classList.add('marked');
+                } else {
+                    cell.classList.add('missed');
                 }
-                
-                // 2. Если этот день уже в прошлом
-                else if (thisCellDate < realToday) {
-                    // А. Если пользователь его отметил (кликнул раньше)
-                    if (marks[dateKey] === 'marked') {
-                        dayCell.classList.add('marked');
-                    }
-                    // Б. Если день прошел, но не отмечен -> АВТОМАТИЧЕСКИ КРАСНЫЙ
-                    else {
-                        dayCell.classList.add('missed');
-                    }
-                }
-
-                // Обработка клика
-                dayCell.addEventListener('click', () => {
-                    // Можно отмечать только сегодняшний или прошедшие дни
-                    if (thisCellDate <= realToday && dateKey !== realTodayStr) {
-                        // Если уже отмечен — ничего не делаем, или можно добавить снятие отметки
-                        if (!dayCell.classList.contains('marked')) {
-                            dayCell.classList.remove('missed');
-                            dayCell.classList.add('marked');
-                            saveMark(dateKey, 'marked');
-                        }
-                    } else if (dateKey === realTodayStr) {
-                        alert("Сегодняшний день уже отмечен зеленым автоматически!");
-                    }
-                });
-
-                gridEl.appendChild(dayCell);
+            } else {
+                cell.classList.add('future');
             }
+
+            cell.onclick = () => {
+                if (cellDate < realToday && !cell.classList.contains('marked')) {
+                    cell.classList.remove('missed');
+                    cell.classList.add('marked');
+                    saveData(dateKey, 'done');
+                }
+            };
+
+            grid.appendChild(cell);
         }
+    }
 
-        // Кнопки навигации
-        document.getElementById('prevMonth').onclick = () => { 
-            currentDate.setMonth(currentDate.getMonth() - 1); 
-            renderCalendar(); 
-        };
-        document.getElementById('nextMonth').onclick = () => { 
-            currentDate.setMonth(currentDate.getMonth() + 1); 
-            renderCalendar(); 
-        };
+    document.getElementById('prevMonth').onclick = () => { activeDate.setMonth(activeDate.getMonth() - 1); render(); };
+    document.getElementById('nextMonth').onclick = () => { activeDate.setMonth(activeDate.getMonth() + 1); render(); };
 
-        // Первый запуск
-        renderCalendar();
-    </script>
+    render();
+    updateStats();
+</script>
+
 </body>
 </html>
