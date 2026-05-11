@@ -2,8 +2,12 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Discipline Flow</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+
     <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700&display=swap" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -17,18 +21,47 @@
             --accent-red: #ef4444; --accent-blue: #3b82f6; --border: #334155; --selected-border: #ffd700;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Urbanist', sans-serif; }
-        html, body { height: 100%; width: 100%; }
-        body { background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; align-items: center; position: relative; overflow: hidden; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Urbanist', sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
 
-        #bgCloseLayer { position: fixed; inset: 0; z-index: 1; width: 100%; height: 100%; }
+        #bgCloseLayer { position: fixed; inset: 0; z-index: 1; }
 
-        .wrapper { display: flex; align-items: center; justify-content: center; width: 100%; max-width: 1200px; transition: all 0.5s ease; padding: 20px; z-index: 10; pointer-events: none; }
+        .wrapper { 
+            display: flex; 
+            flex-direction: row; 
+            align-items: center; 
+            justify-content: center; 
+            width: 100%; 
+            max-width: 1200px; 
+            padding: 20px; 
+            z-index: 10; 
+            pointer-events: none;
+            transition: gap 0.4s ease;
+        }
+        
         .wrapper.panel-open { gap: 30px; }
         
         .dashboard, .side-panel { pointer-events: auto; }
 
-        .dashboard { flex: 0 1 800px; background: var(--card-bg); padding: 40px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+        .dashboard { 
+            flex: 0 1 800px; 
+            background: var(--card-bg); 
+            padding: 40px; 
+            border-radius: 24px; 
+            border: 1px solid var(--border); 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            width: 100%;
+        }
+
         .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
         
         .user-info h1 { font-size: 28px; font-weight: 700; color: var(--text-main); }
@@ -47,19 +80,37 @@
         .cell.missed, .cell.today-unmarked { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border-color: var(--accent-red); }
         
         .cell.inactive { opacity: 0.3; cursor: default; pointer-events: none; }
-
         .cell.selected { border-color: var(--selected-border); transform: scale(1.05); z-index: 5; }
 
-        .side-panel { width: 0; opacity: 0; overflow: hidden; background: var(--card-bg); border-radius: 24px; border: 1px solid var(--border); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .side-panel { 
+            width: 0; opacity: 0; overflow: hidden; 
+            background: var(--card-bg); border-radius: 24px; border: 1px solid var(--border); 
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; 
+        }
+
         .wrapper.panel-open .side-panel { width: 320px; padding: 30px; opacity: 1; }
         
-        .panel-btn { color: white; border: none; padding: 18px 30px; border-radius: 14px; font-weight: 700; cursor: pointer; width: 100%; transition: 0.2s; }
+        .panel-btn { color: white; border: none; padding: 18px 30px; border-radius: 14px; font-weight: 700; cursor: pointer; width: 100%; transition: 0.2s; margin-bottom: 10px; }
         .panel-btn:active { transform: scale(0.96); }
         .fix-btn { background: var(--accent-green); }
         .cancel-btn { background: var(--accent-red); }
 
         .hidden { display: none !important; }
         #authWarning { color: #fbbf24; font-size: 12px; margin-top: 10px; font-weight: 600; }
+
+        /* --- МОБИЛЬНАЯ АДАПТАЦИЯ --- */
+        @media (max-width: 768px) {
+            body { align-items: flex-start; overflow-y: auto; padding-top: 20px; }
+            .wrapper { flex-direction: column; padding: 10px; }
+            .wrapper.panel-open { gap: 20px; }
+            .dashboard { padding: 20px; }
+            .grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+            .header { flex-direction: column; align-items: center; text-align: center; gap: 20px; }
+            .cell { font-size: 20px; }
+            .side-panel { width: 100% !important; height: 0; }
+            .wrapper.panel-open .side-panel { height: auto; padding: 25px; margin-top: 10px; }
+        }
     </style>
 </head>
 <body>
@@ -73,10 +124,10 @@
                 <h1 id="userDisplay">Юзер</h1>
                 <button id="authActionBtn" class="auth-link">Авторизация через Google</button>
             </div>
-            <div style="display:flex; gap:15px; align-items:center; background: rgba(0,0,0,0.2); padding: 8px 16px; border-radius: 12px;">
-                <button id="prevMonth" style="background:none; border:none; color:white; cursor:pointer; font-size: 20px;">←</button>
-                <h2 id="monthYear" style="min-width: 120px; text-align: center; font-size: 18px;">...</h2>
-                <button id="nextMonth" style="background:none; border:none; color:white; cursor:pointer; font-size: 20px;">→</button>
+            <div style="display:flex; gap:10px; align-items:center; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 12px;">
+                <button id="prevMonth" style="background:none; border:none; color:white; cursor:pointer; font-size: 20px; padding: 5px;">←</button>
+                <h2 id="monthYear" style="min-width: 110px; text-align: center; font-size: 16px;">...</h2>
+                <button id="nextMonth" style="background:none; border:none; color:white; cursor:pointer; font-size: 20px; padding: 5px;">→</button>
             </div>
         </div>
         <div class="grid" id="calendarGrid"></div>
@@ -95,6 +146,7 @@
 </div>
 
 <script>
+    // Твой конфиг Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyBTwHveplqnvmfGhoqfKvtMrhdGG8Hog38",
         authDomain: "calendarpeter-ccb5e.firebaseapp.com",
@@ -123,10 +175,8 @@
     let registrationDate = null;
 
     bgCloseLayer.onclick = () => {
-        if (wrapper.classList.contains('panel-open')) {
-            wrapper.classList.remove('panel-open');
-            document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
-        }
+        wrapper.classList.remove('panel-open');
+        document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
     };
 
     authActionBtn.onclick = () => {
@@ -142,6 +192,7 @@
             const doc = await userRef.get();
             if (doc.exists && doc.data().createdAt) {
                 registrationDate = new Date(doc.data().createdAt);
+                registrationDate.setHours(0,0,0,0);
             } else {
                 registrationDate = new Date(); registrationDate.setHours(0,0,0,0);
                 await userRef.set({ createdAt: registrationDate.getTime() }, { merge: true });
@@ -165,7 +216,8 @@
         const m = activeDate.getMonth(); const y = activeDate.getFullYear();
         document.getElementById('monthYear').innerText = `${["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"][m]} ${y}`;
 
-        for (let i = 1; i <= new Date(y, m + 1, 0).getDate(); i++) {
+        const daysInMonth = new Date(y, m + 1, 0).getDate();
+        for (let i = 1; i <= daysInMonth; i++) {
             const cell = document.createElement('div');
             cell.className = 'cell'; cell.innerText = i;
             const dateKey = `${y}-${m}-${i}`;
@@ -176,11 +228,11 @@
             } else if (dateKey === realTodayStr) {
                 cell.classList.add('today-unmarked');
             } else if (registrationDate && cellDate < registrationDate) {
-                cell.classList.add('inactive');
+                cell.classList.add('inactive'); // До регистрации — серый
             } else if (cellDate < realToday) {
-                cell.classList.add('missed');
+                cell.classList.add('missed'); // Пропуски — красный
             } else {
-                cell.classList.add('inactive');
+                cell.classList.add('inactive'); // Будущее — серый
             }
 
             cell.onclick = (e) => {
