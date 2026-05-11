@@ -119,7 +119,7 @@
         <div id="fixContent" class="hidden">
             <div style="font-size: 50px; margin-bottom: 20px;">🤔</div>
             <p style="margin-bottom: 25px; color: var(--text-muted); line-height: 1.4;">
-                Забыл отметить <b id="panelDate" style="color:white">...</b>?
+                Похоже, ты <b id="panelDate" style="color:white">...</b><br>забыл отметить день лопух
             </p>
             <button class="panel-btn fix-btn" id="fixBtn">Я ВСЕ СДЕЛАЛ!</button>
         </div>
@@ -157,11 +157,6 @@
 
         document.getElementById('closePanelBtn').onclick = closeAll;
         
-        document.getElementById('authActionBtn').onclick = () => {
-            if (auth.currentUser) auth.signOut();
-            else auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-        };
-
         auth.onAuthStateChanged(user => {
             document.getElementById('userDisplay').innerText = user ? user.displayName : "Пётр";
             loadData();
@@ -211,20 +206,19 @@
                     const successContent = document.getElementById('successContent');
                     const cancelBtn = document.getElementById('cancelBtn');
 
-                    // Сбрасываем видимость всех блоков
+                    // Сброс
                     [fixContent, successContent, cancelBtn].forEach(el => el.classList.add('hidden'));
 
                     if (isMarked) {
-                        // Если уже отмечен -> только красная кнопка ОТМЕНИТЬ
+                        // Уже отмечен -> просто кнопка ОТМЕНИТЬ
                         cancelBtn.classList.remove('hidden');
                     } else {
-                        // Если НЕ отмечен
                         if (isToday) {
-                            // ПЕРВОЕ НАЖАТИЕ ДЛЯ СЕГОДНЯ: Сразу отмечаем и показываем успех
+                            // Сегодня: сразу успех
                             await markDone();
                             successContent.classList.remove('hidden');
                         } else {
-                            // Для прошлых пропущенных дней: Сначала панель "Я все сделал"
+                            // Прошлое: текст про лопуха + кнопка
                             fixContent.classList.remove('hidden');
                             document.getElementById('panelDate').innerText = `${i}-го числа`;
                         }
@@ -258,6 +252,10 @@
 
         document.getElementById('prevMonth').onclick = () => { activeDate.setMonth(activeDate.getMonth() - 1); loadData(); };
         document.getElementById('nextMonth').onclick = () => { activeDate.setMonth(activeDate.getMonth() + 1); loadData(); };
+        document.getElementById('authActionBtn').onclick = () => {
+            if (auth.currentUser) auth.signOut();
+            else auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+        };
 
         render({});
     }
