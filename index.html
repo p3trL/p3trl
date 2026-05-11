@@ -26,7 +26,7 @@
             min-height: 100vh; width: 100vw; overflow-x: hidden;
         }
 
-        /* Главный контейнер: на ПК элементы идут в ряд */
+        /* Контейнер: на десктопе всё в ряд */
         .wrapper { 
             display: flex; flex-direction: row; align-items: center; justify-content: center; 
             width: 100%; max-width: 1200px; padding: 20px; transition: gap 0.4s ease; 
@@ -35,11 +35,10 @@
         
         .wrapper.panel-open { gap: 30px; }
 
-        /* Карточка календаря */
         .dashboard { 
             flex: 0 1 750px; background: var(--card-bg); padding: 40px; border-radius: 24px; 
             border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.3); 
-            position: relative; z-index: 5; transition: opacity 0.3s ease;
+            position: relative; z-index: 5; transition: filter 0.3s ease, opacity 0.3s ease;
         }
 
         .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
@@ -49,190 +48,4 @@
             aspect-ratio: 1 / 0.85; background: rgba(255,255,255,0.03); 
             border: 2px solid var(--border); border-radius: 16px; 
             display: flex; align-items: center; justify-content: center; 
-            font-size: 24px; font-weight: 700; cursor: pointer; transition: 0.2s; 
-        }
-
-        .cell.marked { background: rgba(34, 197, 94, 0.2) !important; color: var(--accent-green) !important; border-color: var(--accent-green) !important; }
-        .cell.today-is { border-color: #ffffff !important; border-width: 3px; }
-        .cell.today-unmarked { background: var(--today-bright) !important; color: #0f172a !important; }
-        .cell.missed { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border-color: var(--accent-red); }
-        .cell.inactive { opacity: 0.3; cursor: default; pointer-events: none; }
-        .cell.selected { border-color: var(--selected-border) !important; border-width: 4px !important; transform: scale(1.05); }
-
-        /* ПАНЕЛЬ: ДЛЯ КОМПЬЮТЕРА (Справа) */
-        .side-panel { 
-            flex: 0 0 0; width: 0; opacity: 0; overflow: hidden; 
-            background: var(--card-bg); border-radius: 24px; border: 1px solid var(--border); 
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
-            z-index: 10;
-        }
-
-        /* Когда панель открыта на ПК */
-        .wrapper.panel-open .side-panel { flex: 0 0 320px; width: 320px; padding: 30px; opacity: 1; }
-
-        /* АДАПТАЦИЯ ДЛЯ ТЕЛЕФОНА (По центру) */
-        @media (max-width: 768px) {
-            .wrapper { flex-direction: column; }
-            
-            /* Скрываем календарь, когда панель открыта */
-            .wrapper.panel-open .dashboard > .grid, 
-            .wrapper.panel-open .dashboard > .header { opacity: 0; pointer-events: none; }
-
-            .side-panel {
-                position: absolute; 
-                top: 50%; left: 50%; 
-                transform: translate(-50%, -50%) scale(0.9);
-                width: 90% !important; 
-                height: auto;
-                border: none; background: transparent; 
-                z-index: 100;
-            }
-
-            .wrapper.panel-open .side-panel {
-                opacity: 1; transform: translate(-50%, -50%) scale(1);
-                flex: 0 0 auto;
-            }
-
-            .grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
-            .dashboard { padding: 25px; min-height: 480px; width: 100%; }
-            .cell { font-size: 20px; }
-        }
-
-        .panel-btn { color: white; border: none; padding: 18px 30px; border-radius: 14px; font-weight: 700; cursor: pointer; width: 100%; margin-bottom: 10px; }
-        .fix-btn { background: var(--accent-green); }
-        .cancel-btn { background: var(--accent-red); }
-        .hidden { display: none !important; }
-    </style>
-</head>
-<body>
-
-<div class="wrapper" id="mainWrapper">
-    <div class="dashboard" id="dashboardCard">
-        <div class="header">
-            <div>
-                <h1 id="userDisplay">Юзер</h1>
-                <button id="authActionBtn" style="background:none; border:none; color:var(--text-muted); font-size:12px; cursor:pointer;">Авторизация</button>
-            </div>
-            <div style="display:flex; align-items:center; gap:10px; background:rgba(0,0,0,0.2); padding:8px 12px; border-radius:12px;">
-                <button id="prevMonth" style="background:none; border:none; color:white; cursor:pointer;">←</button>
-                <span id="monthYear">...</span>
-                <button id="nextMonth" style="background:none; border:none; color:white; cursor:pointer;">→</button>
-            </div>
-        </div>
-        <div class="grid" id="calendarGrid"></div>
-    </div>
-
-    <div class="side-panel" id="sidePanel">
-        <div id="panelEmoji" style="font-size: 50px; margin-bottom: 20px;">🤔</div>
-        <p id="panelDescription" style="margin-bottom: 25px; color: var(--text-muted); line-height: 1.4;">
-            Похоже, ты <b id="panelDate" style="color:white">...</b><br>забыл отметить день
-        </p>
-        <button class="panel-btn fix-btn hidden" id="fixBtn">Я ВСЕ СДЕЛАЛ!</button>
-        <button class="panel-btn cancel-btn hidden" id="cancelBtn">ОТМЕНИТЬ НАЖАТИЕ</button>
-        <button id="closePanelBtn" style="background:none; border:none; color:var(--text-muted); margin-top:15px; cursor:pointer; text-decoration:underline;">Назад</button>
-    </div>
-</div>
-
-<script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyBTwHveplqnvmfGhoqfKvtMrhdGG8Hog38",
-        authDomain: "calendarpeter-ccb5e.firebaseapp.com",
-        projectId: "calendarpeter-ccb5e",
-        storageBucket: "calendarpeter-ccb5e.firebasestorage.app",
-        messagingSenderId: "941069064655",
-        appId: "1:941069064655:web:0af9686c36671cd8f8daba"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-    const provider = new firebase.auth.GoogleAuthProvider();
-
-    let activeDate = new Date();
-    const realToday = new Date(); realToday.setHours(0,0,0,0);
-    const realTodayStr = `${realToday.getFullYear()}-${realToday.getMonth()}-${realToday.getDate()}`;
-    let selectedDay = null;
-
-    const closeAll = () => {
-        document.getElementById('mainWrapper').classList.remove('panel-open');
-        document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
-    };
-
-    document.getElementById('closePanelBtn').onclick = closeAll;
-    document.getElementById('authActionBtn').onclick = () => {
-        if (auth.currentUser) auth.signOut();
-        else auth.signInWithPopup(provider);
-    };
-
-    auth.onAuthStateChanged(user => {
-        document.getElementById('userDisplay').innerText = user ? user.displayName : "Юзер";
-        loadData();
-    });
-
-    async function loadData() {
-        if (auth.currentUser) {
-            const doc = await db.collection('users').doc(auth.currentUser.uid).get();
-            render(doc.exists ? doc.data() : {});
-        } else render({});
-    }
-
-    function render(userData) {
-        const grid = document.getElementById('calendarGrid');
-        const fragment = document.createDocumentFragment();
-        grid.innerHTML = ''; closeAll();
-        
-        const m = activeDate.getMonth(); const y = activeDate.getFullYear();
-        document.getElementById('monthYear').innerText = `${["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"][m]} ${y}`;
-
-        for (let i = 1; i <= new Date(y, m + 1, 0).getDate(); i++) {
-            const cell = document.createElement('div');
-            const dateKey = `${y}-${m}-${i}`;
-            const cellDate = new Date(y, m, i); cellDate.setHours(0,0,0,0);
-            cell.className = 'cell'; cell.innerText = i;
-
-            if (dateKey === realTodayStr) {
-                cell.classList.add('today-is');
-                cell.classList.add(userData[dateKey] === 'done' ? 'marked' : 'today-unmarked');
-            } else if (userData[dateKey] === 'done') cell.classList.add('marked');
-            else if (cellDate < realToday) cell.classList.add('missed');
-            else cell.classList.add('inactive');
-
-            cell.onclick = () => {
-                if (cell.classList.contains('inactive')) return;
-                document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
-                cell.classList.add('selected');
-                selectedDay = { key: dateKey, el: cell };
-                
-                const isMarked = cell.classList.contains('marked');
-                document.getElementById('panelEmoji').innerText = isMarked ? "🙄" : "🤔";
-                document.getElementById('fixBtn').classList.toggle('hidden', isMarked);
-                document.getElementById('cancelBtn').classList.toggle('hidden', !isMarked);
-                document.getElementById('panelDate').innerText = (dateKey === realTodayStr) ? "сегодня" : `${i}-го числа`;
-                
-                document.getElementById('mainWrapper').classList.add('panel-open');
-            };
-            fragment.appendChild(cell);
-        }
-        grid.appendChild(fragment);
-    }
-
-    document.getElementById('fixBtn').onclick = async () => {
-        selectedDay.el.classList.remove('missed', 'today-unmarked', 'selected');
-        selectedDay.el.classList.add('marked');
-        closeAll();
-        if (auth.currentUser) await db.collection('users').doc(auth.currentUser.uid).set({[selectedDay.key]: 'done'}, { merge: true });
-    };
-
-    document.getElementById('cancelBtn').onclick = async () => {
-        selectedDay.el.classList.remove('marked', 'selected');
-        selectedDay.el.classList.add(selectedDay.key === realTodayStr ? 'today-unmarked' : 'missed');
-        closeAll();
-        if (auth.currentUser) await db.collection('users').doc(auth.currentUser.uid).set({[selectedDay.key]: firebase.firestore.FieldValue.delete()}, { merge: true });
-    };
-
-    document.getElementById('prevMonth').onclick = () => { activeDate.setMonth(activeDate.getMonth() - 1); loadData(); };
-    document.getElementById('nextMonth').onclick = () => { activeDate.setMonth(activeDate.getMonth() + 1); loadData(); };
-</script>
-</body>
-</html>
+            font-size: 24px; font-weight: 700; cursor: pointer; transition: 0.2s;
